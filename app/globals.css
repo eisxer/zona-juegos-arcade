@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Esto fuerza el color oscuro base para tu diseño futurista */
+body {
+  background-color: #020617;
+  /* Negro azulado profundo */
+  color: #ffffff;
+}
+
+/* --- ANIMACIONES FUTURISTAS --- */
+
+/* Rejilla en movimiento (Usando background-position para evitar mover la máscara) */
+@keyframes grid-scroll {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 0 4rem;
+  }
+}
+
+.animate-grid-scroll {
+  animation: grid-scroll 3s linear infinite;
+}
+
+/* Efecto Scanlines (Monitor CRT) */
+.scanlines {
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0) 50%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(0, 0, 0, 0.2));
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Efecto Glitch para Texto */
+@keyframes glitch-skew {
+  0% {
+    transform: skew(0deg);
+  }
+
+  20% {
+    transform: skew(-2deg);
+  }
+
+  40% {
+    transform: skew(2deg);
+  }
+
+  60% {
+    transform: skew(-1deg);
+  }
+
+  80% {
+    transform: skew(1deg);
+  }
+
+  100% {
+    transform: skew(0deg);
+  }
+}
+
+.glitch-text:hover {
+  animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+  color: #06b6d4;
+  /* Cyan */
+  text-shadow: 2px 0 #ef4444, -2px 0 #eab308;
+}
