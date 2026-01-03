@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import {
     Heart, Star, Zap, Smile, Sun, Music, Cpu, AlertCircle, Brain, Eye,
     Gem, Rocket, Atom, Ghost, Anchor, Shield, Tablet, Wifi, Check, Crown,
-    MessageSquare, X, Send
+    MessageSquare, X, Send, HelpCircle, ArrowRight, Menu
 } from "lucide-react";
 
 export default function MemoryGame({ onWinGame }) {
@@ -24,77 +24,49 @@ export default function MemoryGame({ onWinGame }) {
     const [playCount, setPlayCount] = useState(0);
     const [gameState, setGameState] = useState('ready');
     const [timeLeft, setTimeLeft] = useState(7);
-    const [gameTimeLeft, setGameTimeLeft] = useState(0);
 
-    // --- ESTADOS DEL FEEDBACK (Buzón de sugerencias) ---
+    // --- ESTADOS DE UI ADICIONALES ---
+    const [showTutorial, setShowTutorial] = useState(false);
+    const [tutorialStep, setTutorialStep] = useState(0);
     const [showFeedback, setShowFeedback] = useState(false);
-    const [feedbackType, setFeedbackType] = useState("sugerencia"); // sugerencia, error, otro
+    const [feedbackType, setFeedbackType] = useState("sugerencia");
     const [feedbackText, setFeedbackText] = useState("");
     const [isSendingFeedback, setIsSendingFeedback] = useState(false);
-    const [feedbackStatus, setFeedbackStatus] = useState(null); // success, error
+    const [feedbackStatus, setFeedbackStatus] = useState(null);
 
-    // --- CONFIGURACIÓN DE FORMSPREE (INTEGRADO) ---
+    // --- CONFIGURACIÓN FORMSPREE ---
     const FORMSPREE_ENDPOINT = "https://formspree.io/f/mzdzvnyw";
 
-    const handleSendFeedback = async (e) => {
-        e.preventDefault();
-        if (!feedbackText.trim()) return;
+    // --- DATOS TUTORIAL ---
+    const TUTORIAL_STEPS = [
+        { icon: <Brain className="w-12 h-12 text-cyan-400" />, title: "Bienvenido", desc: "Sincroniza tu memoria encontrando los pares idénticos." },
+        { icon: <Eye className="w-12 h-12 text-yellow-400" />, title: "Memoriza", desc: "Tienes unos segundos para ver las cartas antes de que se oculten." },
+        { icon: <Rocket className="w-12 h-12 text-orange-400" />, title: "Progresa", desc: "Completa 7 rondas para subir de nivel y ganar rangos de Prestigio." },
+        { icon: <MessageSquare className="w-12 h-12 text-purple-400" />, title: "Feedback", desc: "Usa el botón de chat arriba para reportar errores o dar ideas." }
+    ];
 
-        setIsSendingFeedback(true);
-
-        try {
-            const response = await fetch(FORMSPREE_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: feedbackType,
-                    message: feedbackText,
-                    level_context: level,
-                    score_context: totalScore,
-                    loops_context: progress[level]?.loops || 0
-                })
-            });
-
-            if (response.ok) {
-                setFeedbackStatus('success');
-                setFeedbackText("");
-                setTimeout(() => {
-                    setShowFeedback(false);
-                    setFeedbackStatus(null);
-                }, 2000);
-            } else {
-                setFeedbackStatus('error');
-            }
-        } catch (error) {
-            setFeedbackStatus('error');
-        } finally {
-            setIsSendingFeedback(false);
-        }
-    };
-
-    // Cargar datos al inicio
+    // --- CARGA INICIAL ---
     useEffect(() => {
         const storedProgress = localStorage.getItem('arcade_memory_progress');
-        if (storedProgress) {
-            setProgress(JSON.parse(storedProgress));
-        } else {
-            const initialProgress = {};
-            for (let i = 1; i <= 7; i++) initialProgress[i] = { wins: 0, loops: 0, unlocked: i === 1 };
-            setProgress(initialProgress);
+        if (storedProgress) setProgress(JSON.parse(storedProgress));
+        else {
+            const initial = {};
+            for (let i = 1; i <= 7; i++) initial[i] = { wins: 0, loops: 0, unlocked: i === 1 };
+            setProgress(initial);
         }
 
         const storedScore = localStorage.getItem('arcade_memory_total_score');
         if (storedScore) setTotalScore(parseInt(storedScore));
+
+        if (!localStorage.getItem('arcade_memory_tutorial_seen')) setShowTutorial(true);
     }, []);
 
-    // Guardar progreso
+    // --- PERSISTENCIA ---
     useEffect(() => {
-        if (Object.keys(progress).length > 0) {
-            localStorage.setItem('arcade_memory_progress', JSON.stringify(progress));
-        }
+        if (Object.keys(progress).length > 0) localStorage.setItem('arcade_memory_progress', JSON.stringify(progress));
     }, [progress]);
 
-    // CONFIGURACIÓN DE NIVELES (1 al 7)
+    // --- LÓGICA DE JUEGO ---
     const LEVELS = {
         1: { pairs: 3, cols: 3, basePoints: 100, bonus: 500, name: "Recluta", time: 7 },
         2: { pairs: 4, cols: 4, basePoints: 200, bonus: 750, name: "Aprendiz", time: 8 },
@@ -105,7 +77,6 @@ export default function MemoryGame({ onWinGame }) {
         7: { pairs: 9, cols: 5, basePoints: 700, bonus: 2000, name: "Omnisciente", time: 20 },
     };
 
-    // Iconos
     const ALL_ICONS = [
         { id: 1, icon: <Heart className="text-fuchsia-400 w-8 h-8" /> },
         { id: 2, icon: <Star className="text-yellow-400 w-8 h-8" /> },
@@ -127,6 +98,7 @@ export default function MemoryGame({ onWinGame }) {
         { id: 18, icon: <Eye className="text-green-400 w-8 h-8" /> },
     ];
 
+    // --- EFECTOS DE JUEGO ---
     useEffect(() => {
         if (!LEVELS[level]) return;
         const config = LEVELS[level];
@@ -139,145 +111,91 @@ export default function MemoryGame({ onWinGame }) {
 
     useEffect(() => {
         let timer;
-        if (gameState === 'memorizing' && timeLeft > 0) {
-            timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-        } else if (gameState === 'memorizing' && timeLeft === 0) {
-            setGameState('playing');
-        }
+        if (gameState === 'memorizing' && timeLeft > 0) timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+        else if (gameState === 'memorizing' && timeLeft === 0) setGameState('playing');
         return () => clearTimeout(timer);
     }, [gameState, timeLeft]);
 
-    const startGame = () => {
-        setGameState('memorizing');
-        setTimeLeft(LEVELS[level].time);
-    };
+    const startGame = () => { setGameState('memorizing'); setTimeLeft(LEVELS[level].time); };
 
     const handleCardClick = (uniqueId, id) => {
         if (gameState !== 'playing' || processing || won || flipped.includes(uniqueId) || solved.includes(uniqueId)) return;
         const newFlipped = [...flipped, uniqueId];
         setFlipped(newFlipped);
-
         if (newFlipped.length === 2) {
             setProcessing(true);
-            const [firstCardId, secondCardId] = newFlipped;
-            const firstCard = cards.find((c) => c.uniqueId === firstCardId);
-            const secondCard = cards.find((c) => c.uniqueId === secondCardId);
-
-            if (firstCard.id === secondCard.id) {
-                setSolved([...solved, firstCardId, secondCardId]);
+            const [c1, c2] = newFlipped.map(uid => cards.find(c => c.uniqueId === uid));
+            if (c1.id === c2.id) {
+                setSolved([...solved, c1.uniqueId, c2.uniqueId]);
                 setFlipped([]);
                 setProcessing(false);
             } else {
-                setTimeout(() => {
-                    setFlipped([]);
-                    setMistakes((prev) => prev + 1);
-                    setProcessing(false);
-                }, 1000);
+                setTimeout(() => { setFlipped([]); setMistakes(p => p + 1); setProcessing(false); }, 1000);
             }
         }
     };
 
     const gameWonRef = useRef(false);
-
     useEffect(() => {
         if (cards.length > 0 && solved.length === cards.length && !gameWonRef.current) {
             gameWonRef.current = true;
-
             const currentLevelData = progress[level] || { wins: 0, loops: 0 };
             const isLooping = currentLevelData.loops > 0;
             const config = LEVELS[level];
+            let pts = isLooping ? Math.floor(config.basePoints * 0.5) : config.basePoints;
+            if (currentLevelData.wins + 1 === 7) pts += isLooping ? Math.floor(config.bonus * 0.5) : config.bonus;
 
-            let calculatedPoints = 0;
-            const stepPoints = isLooping ? Math.floor(config.basePoints * 0.5) : config.basePoints;
-            calculatedPoints += stepPoints;
-
-            if (currentLevelData.wins + 1 === 7) {
-                const completionBonus = isLooping ? Math.floor(config.bonus * 0.5) : config.bonus;
-                calculatedPoints += completionBonus;
-            }
-
-            const newTotalScore = totalScore + calculatedPoints;
-            setTotalScore(newTotalScore);
-            localStorage.setItem('arcade_memory_total_score', newTotalScore.toString());
-
-            setPointsEarned(calculatedPoints);
+            const newTotal = totalScore + pts;
+            setTotalScore(newTotal);
+            localStorage.setItem('arcade_memory_total_score', newTotal.toString());
+            setPointsEarned(pts);
             setWon(true);
             setGameState('finished');
-            onWinGame(calculatedPoints);
+            onWinGame(pts);
 
             const isLevelComplete = (currentLevelData.wins + 1) === 7;
-            if (isLevelComplete) {
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#F472B6', '#22D3EE'], scalar: 1.2 });
-            } else {
-                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 }, scalar: 0.8 });
-            }
+            if (isLevelComplete) confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#F472B6', '#22D3EE'], scalar: 1.2 });
+            else confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 }, scalar: 0.8 });
         }
     }, [solved, cards]);
 
     const handleKeepTraining = () => {
-        setWon(false);
-        setGameState('ready');
-        setSolved([]);
-        setMistakes(0);
-        setFlipped([]);
-        gameWonRef.current = false;
-
-        const currentData = progress[level] || { wins: 0, loops: 0, unlocked: true };
-        let newWins = currentData.wins + 1;
-        let newLoops = currentData.loops;
-
-        if (newWins >= 7) {
-            newWins = 0;
-            newLoops += 1;
-        }
-
-        const newProgress = {
-            ...progress,
-            [level]: { ...currentData, wins: newWins, loops: newLoops }
-        };
-        setProgress(newProgress);
-        setPlayCount(prev => prev + 1);
+        setWon(false); setGameState('ready'); setSolved([]); setMistakes(0); setFlipped([]); gameWonRef.current = false;
+        const current = progress[level] || { wins: 0, loops: 0, unlocked: true };
+        let w = current.wins + 1, l = current.loops;
+        if (w >= 7) { w = 0; l++; }
+        setProgress({ ...progress, [level]: { ...current, wins: w, loops: l } });
+        setPlayCount(p => p + 1);
     };
 
     const handleNextLevel = () => {
-        setWon(false);
-        setGameState('ready');
-        setSolved([]);
-        setMistakes(0);
-        setFlipped([]);
-        gameWonRef.current = false;
+        setWon(false); setGameState('ready'); setSolved([]); setMistakes(0); setFlipped([]); gameWonRef.current = false;
+        const current = progress[level] || { wins: 0, loops: 0, unlocked: true };
+        let w = current.wins + 1, l = current.loops;
+        if (w >= 7) { w = 0; l++; }
 
-        const currentData = progress[level] || { wins: 0, loops: 0, unlocked: true };
-        let newWins = currentData.wins + 1;
-        let newLoops = currentData.loops;
+        const nextLvl = level + 1;
+        const nextData = progress[nextLvl] || { wins: 0, loops: 0, unlocked: false };
 
-        if (newWins >= 7) {
-            newWins = 0;
-            newLoops += 1;
-        }
-
-        const nextLevel = level + 1;
-        const nextLevelData = progress[nextLevel] || { wins: 0, loops: 0, unlocked: false };
-
-        const newProgress = {
-            ...progress,
-            [level]: { ...currentData, wins: newWins, loops: newLoops },
-            [nextLevel]: { ...nextLevelData, unlocked: true }
-        };
-
-        setProgress(newProgress);
-
-        if (level < 7) {
-            setLevel(prev => prev + 1);
-        } else {
-            setLevel(1);
-        }
+        setProgress({ ...progress, [level]: { ...current, wins: w, loops: l }, [nextLvl]: { ...nextData, unlocked: true } });
+        if (level < 7) setLevel(p => p + 1); else setLevel(1);
     };
 
-    const currentLevelInfo = progress[level] || { wins: 0, loops: 0 };
-    const wins = currentLevelInfo.wins;
-    const loops = currentLevelInfo.loops;
+    const handleSendFeedback = async (e) => {
+        e.preventDefault(); if (!feedbackText.trim()) return;
+        setIsSendingFeedback(true);
+        try {
+            const res = await fetch(FORMSPREE_ENDPOINT, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: feedbackType, message: feedbackText, level, score: totalScore })
+            });
+            if (res.ok) { setFeedbackStatus('success'); setFeedbackText(""); setTimeout(() => { setShowFeedback(false); setFeedbackStatus(null); }, 2000); }
+            else setFeedbackStatus('error');
+        } catch { setFeedbackStatus('error'); } finally { setIsSendingFeedback(false); }
+    };
 
+    const currentWins = progress[level]?.wins || 0;
+    const currentLoops = progress[level]?.loops || 0;
     const getGridClass = () => {
         const pairs = LEVELS[level].pairs;
         if (pairs <= 3) return "grid-cols-3";
@@ -286,122 +204,104 @@ export default function MemoryGame({ onWinGame }) {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center w-full max-w-md p-4 relative">
+        <div className="flex flex-col items-center w-full max-w-md mx-auto min-h-[600px] p-4 relative">
 
-            {/* --- BOTÓN DE FEEDBACK (CORREGIDO PARA MÓVIL) --- */}
-            {/* Cambio realizado: De '-top-2 -right-2' a 'top-2 right-2' para que esté DENTRO del contenedor */}
-            <button
-                onClick={() => setShowFeedback(true)}
-                className="absolute top-2 right-2 z-40 w-10 h-10 bg-slate-800/80 border border-cyan-500/30 text-cyan-400 rounded-full flex items-center justify-center hover:bg-slate-700 hover:scale-105 transition-all shadow-lg"
-                title="Enviar sugerencias o reportar errores"
-            >
-                <MessageSquare className="w-5 h-5" />
-            </button>
-
-            {/* Header Nivel */}
-            <div className="flex flex-col w-full mb-6 items-center justify-center relative">
-
-                {/* --- NOMBRE DEL JUEGO --- */}
-                <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 uppercase tracking-wider">
-                    MEMORIA NEURAL
-                </h2>
-
-                <div className="flex items-center gap-4 mt-2">
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-cyan-500 blur-md opacity-20 group-hover:opacity-40 transition-opacity rounded-full"></div>
-                        <div className="relative flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-900 border border-cyan-400/50">
-                            <span className="text-cyan-500/70 text-[10px] font-black uppercase tracking-wider">
-                                NIVEL {level}
-                            </span>
-                            <div className="w-px h-3 bg-cyan-500/30"></div>
-                            <span className="text-cyan-300 text-xs font-black uppercase tracking-wider">
-                                {LEVELS[level].name}
-                            </span>
-                        </div>
+            {/* --- TOP BAR (HUD) --- */}
+            {/* Diseño limpio: Logo izquierda, botones derecha */}
+            <div className="w-full flex items-center justify-between mb-2 z-30">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <Brain className="w-5 h-5 text-white" />
                     </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-cyan-500/70 leading-none tracking-widest uppercase">Sistema</span>
+                        <span className="text-sm font-black text-white leading-none tracking-wide">NEURAL</span>
+                    </div>
+                </div>
 
-                    {loops > 0 && (
-                        <div className="flex flex-col items-center animate-fade-in-left">
-                            <span className="text-[8px] text-yellow-500/70 font-black uppercase tracking-wider leading-none mb-0.5">Rango</span>
-                            <div className="flex items-center gap-1 bg-yellow-900/20 px-2 py-0.5 rounded-lg border border-yellow-500/30">
-                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                <span className="text-yellow-400 font-bold text-sm leading-none">{loops}</span>
-                            </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => { setTutorialStep(0); setShowTutorial(true); }} className="w-9 h-9 rounded-full bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-yellow-400 hover:border-yellow-500/50 transition-all flex items-center justify-center">
+                        <HelpCircle className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setShowFeedback(true)} className="w-9 h-9 rounded-full bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/50 transition-all flex items-center justify-center relative">
+                        <MessageSquare className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+
+            {/* --- INFO BAR (Nivel & Progreso) --- */}
+            {/* Diseño unificado en una sola tarjeta glassmorphism */}
+            <div className="w-full bg-slate-900/40 border border-white/5 rounded-2xl p-3 mb-4 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-cyan-950 border border-cyan-500/30 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                            NIVEL {level}
+                        </span>
+                        <span className="text-xs font-bold text-slate-300 uppercase">{LEVELS[level].name}</span>
+                    </div>
+                    {currentLoops > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-yellow-950/30 border border-yellow-500/20">
+                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                            <span className="text-[10px] font-bold text-yellow-500">Rango {currentLoops}</span>
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1 mt-4 animate-fade-in-up">
+                {/* Barra de Progreso Minimalista */}
+                <div className="flex justify-between items-center gap-1">
                     {[...Array(7)].map((_, i) => {
-                        const step = i + 1;
-                        const isCompleted = step <= wins;
-                        const isCurrent = step === wins + 1;
-
+                        const active = i < currentWins;
+                        const current = i === currentWins;
                         return (
-                            <div key={i} className="flex items-center">
-                                <div className={`
-                                    w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-all
-                                    ${isCompleted
-                                        ? "bg-cyan-500 border-cyan-500 text-slate-950"
-                                        : isCurrent
-                                            ? "bg-slate-900 border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] scale-110"
-                                            : "bg-slate-900/50 border-cyan-900/30 text-slate-600"
-                                    }
-                                `}>
-                                    {isCompleted ? <Check className="w-2.5 h-2.5 stroke-[4]" /> : step}
-                                </div>
-                                {step < 7 && (
-                                    <div className={`w-2 h-0.5 ${step < wins + 1 ? "bg-cyan-500" : "bg-slate-800"}`}></div>
-                                )}
+                            <div key={i} className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden relative">
+                                {active && <div className="absolute inset-0 bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>}
+                                {current && <div className="absolute inset-0 bg-slate-600 animate-pulse"></div>}
                             </div>
                         );
                     })}
                 </div>
             </div>
 
-            {/* Área de Juego */}
-            <div className={`relative w-full ${level === 1 ? 'aspect-[3/2]' : 'aspect-[4/5]'} transition-all duration-500`}>
+            {/* --- ÁREA DE JUEGO --- */}
+            <div className={`relative w-full ${level === 1 ? 'aspect-[3/2]' : 'aspect-[4/5]'} transition-all duration-500 mb-4`}>
 
-                {gameState === 'ready' && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm rounded-xl border border-cyan-500/30">
-                        <button
-                            onClick={startGame}
-                            className="px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xl rounded-full shadow-[0_0_20px_rgba(6,182,212,0.5)] active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2"
-                        >
-                            <Brain className="w-6 h-6" /> Iniciar
-                        </button>
-                        <p className="mt-4 text-cyan-300/70 text-xs font-bold uppercase tracking-wider">
-                            {wins === 0 && loops === 0 ? "Primera Misión" : `Ronda ${wins + 1}/7`}
-                        </p>
-                    </div>
-                )}
+                {/* Overlay: Ready */}
+                <AnimatePresence>
+                    {gameState === 'ready' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-[2px] rounded-xl">
+                            <button onClick={startGame} className="group relative px-8 py-3 bg-cyan-500 text-slate-950 font-black text-xl rounded-full shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all overflow-hidden">
+                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                <span className="relative flex items-center gap-2 uppercase tracking-widest"><Brain className="w-5 h-5" /> Iniciar</span>
+                            </button>
+                            <p className="mt-4 text-cyan-400/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">
+                                {currentWins === 0 && currentLoops === 0 ? "Primera Secuencia" : `Secuencia ${currentWins + 1} / 7`}
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {gameState === 'memorizing' && (
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20">
-                        <div className="bg-slate-900/90 border border-yellow-500/50 px-4 py-1 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.3)]">
-                            <span className="text-yellow-400 font-black text-lg flex items-center gap-2">
-                                <span className="animate-pulse">👁️</span> {timeLeft}s
-                            </span>
-                        </div>
-                    </div>
-                )}
+                {/* Overlay: Memorizing Timer */}
+                <AnimatePresence>
+                    {gameState === 'memorizing' && (
+                        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="absolute -top-12 left-0 right-0 flex justify-center z-20">
+                            <div className="px-4 py-1 rounded-full bg-slate-900 border border-yellow-500/30 text-yellow-400 font-bold flex items-center gap-2 shadow-lg shadow-yellow-500/10">
+                                <Eye className="w-4 h-4 animate-pulse" />
+                                <span>Memoriza: {timeLeft}s</span>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
+                {/* Grid */}
                 <div className={`grid gap-2 w-full h-full ${getGridClass()}`}>
                     {cards.map((card) => (
                         <div key={card.uniqueId} onClick={() => handleCardClick(card.uniqueId, card.id)} className="relative cursor-pointer group perspective-1000">
-                            <motion.div
-                                className="w-full h-full rounded-lg transition-all shadow-lg"
-                                initial={false}
-                                animate={{ rotateY: flipped.includes(card.uniqueId) || solved.includes(card.uniqueId) || gameState === 'memorizing' ? 180 : 0 }}
-                                style={{ transformStyle: "preserve-3d" }}
-                            >
-                                <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md rounded-lg border border-cyan-900/40 flex items-center justify-center backface-hidden shadow-[inset_0_0_20px_rgba(0,255,255,0.05)]">
-                                    <Cpu className="w-6 h-6 text-cyan-900/40 group-hover:text-cyan-500/50 transition-colors" />
+                            <motion.div className="w-full h-full rounded-lg transition-all shadow-md" initial={false} animate={{ rotateY: flipped.includes(card.uniqueId) || solved.includes(card.uniqueId) || gameState === 'memorizing' ? 180 : 0 }} style={{ transformStyle: "preserve-3d" }}>
+                                <div className="absolute inset-0 bg-slate-800/80 rounded-lg border border-white/5 flex items-center justify-center backface-hidden">
+                                    <Cpu className="w-5 h-5 text-slate-600 group-hover:text-cyan-500/50 transition-colors" />
                                 </div>
-                                <div className={`absolute inset-0 flex items-center justify-center rounded-lg border backface-hidden transition-all ${solved.includes(card.uniqueId) ? "bg-emerald-900/40 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]" : "bg-slate-800 border-cyan-400/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"}`} style={{ transform: 'rotateY(180deg)' }}>
-                                    <div className={`${cards.length > 12 ? 'scale-75' : 'scale-100'}`}>
-                                        {card.icon}
-                                    </div>
+                                <div className={`absolute inset-0 flex items-center justify-center rounded-lg border backface-hidden ${solved.includes(card.uniqueId) ? "bg-emerald-500/20 border-emerald-500/50" : "bg-slate-800 border-cyan-400/30"}`} style={{ transform: 'rotateY(180deg)' }}>
+                                    <div className={`${cards.length > 12 ? 'scale-75' : 'scale-100'}`}>{card.icon}</div>
                                 </div>
                             </motion.div>
                         </div>
@@ -409,126 +309,75 @@ export default function MemoryGame({ onWinGame }) {
                 </div>
             </div>
 
-            <div className="w-full mt-4 flex items-center justify-between px-4">
-                <div className="bg-slate-900/80 border border-cyan-500/30 px-4 py-1 rounded-lg text-sm flex flex-col items-center shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                    <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-wider">Total</span>
-                    <span className="font-black text-lg text-white leading-none">{totalScore}</span>
+            {/* --- FOOTER STATS --- */}
+            <div className="w-full grid grid-cols-2 gap-4">
+                <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Puntuación</span>
+                    <span className="text-xl font-black text-white tabular-nums tracking-tight">{totalScore}</span>
                 </div>
-
-                <div className="bg-slate-900/50 border border-slate-800/50 px-4 py-1 rounded-full flex items-center gap-2">
-                    <AlertCircle className="w-3 h-3 text-slate-400" />
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Fallos:</span>
-                    <span className={`font-bold text-sm ${mistakes > 0 ? "text-slate-300" : "text-slate-700"}`}>{mistakes}</span>
+                <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Fallos</span>
+                    <span className={`text-xl font-black tabular-nums tracking-tight ${mistakes > 0 ? "text-red-400" : "text-slate-400"}`}>{mistakes}</span>
                 </div>
             </div>
 
+            {/* --- MODALES (Feedback, Tutorial, Victoria) --- */}
             <AnimatePresence>
-                {/* --- MODAL DE FEEDBACK --- */}
                 {showFeedback && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-2xl relative">
-                            <button onClick={() => setShowFeedback(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white">
-                                <X className="w-5 h-5" />
-                            </button>
-
-                            <h3 className="text-xl font-black text-white mb-4 flex items-center gap-2">
-                                <MessageSquare className="text-cyan-400" /> Comentarios
-                            </h3>
-
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-6 relative shadow-2xl">
+                            <button onClick={() => setShowFeedback(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
+                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-cyan-400" /> Feedback</h3>
                             {feedbackStatus === 'success' ? (
-                                <div className="text-center py-8">
-                                    <Check className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
-                                    <p className="text-white font-bold">¡Mensaje Enviado!</p>
-                                    <p className="text-slate-400 text-sm">Gracias por tu aporte.</p>
-                                </div>
+                                <div className="text-center py-8"><Check className="w-12 h-12 text-emerald-500 mx-auto mb-2" /><p className="text-white font-bold">¡Recibido!</p></div>
                             ) : (
-                                <form onSubmit={handleSendFeedback} className="flex flex-col gap-4">
-                                    <div>
-                                        <label className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-1 block">Tipo de Mensaje</label>
-                                        <select
-                                            value={feedbackType}
-                                            onChange={(e) => setFeedbackType(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-sm focus:border-cyan-500 outline-none"
-                                        >
-                                            <option value="sugerencia">💡 Sugerencia</option>
-                                            <option value="error">🪲 Reportar Error (Bug)</option>
-                                            <option value="otro">💬 Otro Comentario</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-1 block">Tu Mensaje</label>
-                                        <textarea
-                                            value={feedbackText}
-                                            onChange={(e) => setFeedbackText(e.target.value)}
-                                            placeholder="Escribe aquí tus ideas, errores encontrados o comentarios para mejorar el juego..."
-                                            className="w-full h-32 bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm resize-none focus:border-cyan-500 outline-none"
-                                            required
-                                        ></textarea>
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        disabled={isSendingFeedback}
-                                        className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isSendingFeedback ? 'Enviando...' : <><Send className="w-4 h-4" /> Enviar a Desarrollador</>}
-                                    </button>
-                                    {feedbackStatus === 'error' && (
-                                        <p className="text-red-400 text-xs text-center mt-2">Error al enviar. Inténtalo de nuevo.</p>
-                                    )}
-                                    <p className="text-[10px] text-slate-500 text-center">
-                                        Los mensajes se enviarán directamente a eisnerkb@gmail.com
-                                    </p>
+                                <form onSubmit={handleSendFeedback} className="flex flex-col gap-3">
+                                    <select value={feedbackType} onChange={e => setFeedbackType(e.target.value)} className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-white focus:border-cyan-500 outline-none"><option value="sugerencia">💡 Sugerencia</option><option value="error">🪲 Error</option></select>
+                                    <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Escribe aquí..." className="bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-white h-24 resize-none focus:border-cyan-500 outline-none" required></textarea>
+                                    <button type="submit" disabled={isSendingFeedback} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-lg text-sm">{isSendingFeedback ? '...' : 'Enviar'}</button>
                                 </form>
                             )}
                         </motion.div>
                     </motion.div>
                 )}
 
-                {/* --- MODAL VICTORIA --- */}
-                {won && (
-                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="absolute inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="bg-slate-900/95 border border-cyan-500/50 p-6 rounded-3xl text-center shadow-[0_0_50px_rgba(6,182,212,0.4)] max-w-sm w-full backdrop-blur-xl">
-                            <h3 className="text-2xl font-black text-white mb-1 uppercase italic">
-                                {(wins + 1) === 7 ? "¡Misión Cumplida!" : "¡Bien Hecho!"}
-                            </h3>
-                            <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-4">
-                                {loops > 0 ? "Modo Prestigio (50%)" : "Primera Vuelta (100%)"}
-                            </p>
-
-                            <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-4 rounded-2xl border border-white/10 mb-6">
-                                <div className="text-4xl font-black text-yellow-400 drop-shadow-md">+{pointsEarned}</div>
-                                <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">Puntos Obtenidos</div>
+                {showTutorial && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <motion.div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-8 relative text-center">
+                            <div className="mb-6 flex justify-center"><div className="p-4 bg-slate-800 rounded-full">{TUTORIAL_STEPS[tutorialStep].icon}</div></div>
+                            <h3 className="text-2xl font-black text-white mb-2 uppercase">{TUTORIAL_STEPS[tutorialStep].title}</h3>
+                            <p className="text-slate-400 text-sm mb-8">{TUTORIAL_STEPS[tutorialStep].desc}</p>
+                            <div className="flex items-center justify-between">
+                                <button onClick={() => { localStorage.setItem('arcade_memory_tutorial_seen', 'true'); setShowTutorial(false); }} className="text-xs font-bold text-slate-500 uppercase">Saltar</button>
+                                <div className="flex gap-1">{TUTORIAL_STEPS.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === tutorialStep ? "bg-cyan-400" : "bg-slate-700"}`} />)}</div>
+                                <button onClick={() => { if (tutorialStep < 3) setTutorialStep(p => p + 1); else { localStorage.setItem('arcade_memory_tutorial_seen', 'true'); setShowTutorial(false); } }} className="px-4 py-2 bg-cyan-500 text-slate-900 font-bold rounded-full text-sm">Siguiente</button>
                             </div>
+                        </motion.div>
+                    </motion.div>
+                )}
 
-                            <div className="flex flex-col gap-3 w-full">
-                                {(loops > 0 || (wins + 1) === 7) && level < 7 && (
-                                    <button
-                                        onClick={handleNextLevel}
-                                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl text-white font-black text-sm shadow-lg hover:shadow-orange-500/40 active:scale-95 transition-all w-full flex items-center justify-center gap-2 animate-pulse"
-                                    >
-                                        <Rocket className="w-5 h-5" />
-                                        AVANZAR AL NIVEL {level + 1}
+                {won && (
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <div className="w-full bg-slate-900 border border-cyan-500/50 p-6 rounded-3xl text-center shadow-2xl shadow-cyan-500/20">
+                            <h3 className="text-2xl font-black text-white mb-1 italic">{(currentWins + 1) === 7 ? "¡MISIÓN CUMPLIDA!" : "¡SISTEMA HACKEADO!"}</h3>
+                            <div className="my-6 py-4 bg-slate-800/50 rounded-2xl border border-white/5">
+                                <span className="text-4xl font-black text-yellow-400 block">+{pointsEarned}</span>
+                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">Puntos</span>
+                            </div>
+                            <div className="space-y-3">
+                                {(currentLoops > 0 || (currentWins + 1) === 7) && level < 7 && (
+                                    <button onClick={handleNextLevel} className="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
+                                        <Rocket className="w-4 h-4" /> NIVEL {level + 1}
                                     </button>
                                 )}
-
-                                <button
-                                    onClick={handleKeepTraining}
-                                    className={`px-6 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all w-full border
-                                        ${(loops > 0 || (wins + 1) === 7)
-                                            ? "bg-slate-800 border-cyan-500/30 text-cyan-400 hover:bg-slate-700"
-                                            : "bg-gradient-to-r from-cyan-600 to-blue-600 border-transparent text-white shadow-lg hover:shadow-cyan-500/30"
-                                        }`}
-                                >
-                                    {(wins + 1) === 7
-                                        ? "Reiniciar Barra (Prestigio)"
-                                        : `Siguiente Ronda (${wins + 1}/7)`
-                                    }
+                                <button onClick={handleKeepTraining} className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-xl font-bold text-sm transition-colors">
+                                    {(currentWins + 1) === 7 ? "Reiniciar (Prestigio)" : "Siguiente Ronda"}
                                 </button>
                             </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 }
