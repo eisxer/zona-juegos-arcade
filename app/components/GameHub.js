@@ -50,20 +50,37 @@ const GAMES_MENU = [
 export default function GameHub() {
     const [activeGame, setActiveGame] = useState(null);
     const [score, setScore] = useState(0);
+    const [guestScores, setGuestScores] = useState({});
     const [ranking, setRanking] = useState([]);
     const [user, setUser] = useState(null);
     const [showProfileSetup, setShowProfileSetup] = useState(false);
 
     useEffect(() => {
-        // 1. Cargar Usuario
+        // 1. Cargar Puntuaciones de Visitante (Session Storage)
+        const storedGuestScores = sessionStorage.getItem('arcade_guest_scores');
+        if (storedGuestScores) {
+            try {
+                const parsedScores = JSON.parse(storedGuestScores);
+                setGuestScores(parsedScores);
+                // Calcular total
+                const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
+                setScore(total);
+            } catch (e) {
+                console.error("Error parsing guest scores", e);
+            }
+        }
+
+        // 2. Intentar Cargar Usuario (opcional, no bloqueante)
         const storedUserId = localStorage.getItem('arcade_user_id');
         if (storedUserId) {
             fetchUser(storedUserId);
         } else {
-            setShowProfileSetup(true);
+            // Si no hay usuario, estamos en modo visitante por defecto.
+            // No mostramos el setup profile automáticamente.
+            // setShowProfileSetup(true); // DESHABILITADO
         }
 
-        // 2. Cargar Ranking Inicial
+        // 3. Cargar Ranking Inicial
         fetchLeaderboard();
     }, []);
 
@@ -73,11 +90,18 @@ export default function GameHub() {
             if (res.ok) {
                 const userData = await res.json();
                 setUser(userData);
+                // Si hay usuario, usamos sus puntos del servidor??
+                // El requerimiento dice "puntos temporales... independiente de cada juego".
+                // Asumiremos que si logueas, usas el sistema completo.
+                // Pero si dice "entrar como visitante", priorizamos el comportamiento "sin usuario".
+                // Dejaremos que si hay usuario, se muestre su score total persistente,
+                // PERO... el usuario pidió "entrar a cualquier juego pero como visitante".
+                // Quizás deberíamos ignorar el login automático para cumplir estrictamente "como visitante".
+                // Pero para no romper la app existente, mantendremos híbrido:
+                // Si ya estabas logueado, genial. Si no, eres visitante.
                 setScore(userData.total_score);
             } else {
-                // Si no existe (ej. base de datos borrada), pedir setup de nuevo
                 localStorage.removeItem('arcade_user_id');
-                setShowProfileSetup(true);
             }
         } catch (error) {
             console.error("Error fetching user:", error);
@@ -89,7 +113,6 @@ export default function GameHub() {
             const res = await fetch('/api/leaderboard');
             if (res.ok) {
                 const data = await res.json();
-                // Marcar al usuario actual en el ranking
                 const storedUserId = localStorage.getItem('arcade_user_id');
                 const rankedData = data.map(u => ({
                     ...u,
@@ -118,9 +141,9 @@ export default function GameHub() {
                 const newUser = await res.json();
                 localStorage.setItem('arcade_user_id', newId);
                 setUser(newUser);
-                setScore(0);
+                setScore(0); // O podríamos importar los puntos de visitante?
                 setShowProfileSetup(false);
-                fetchLeaderboard(); // Refrescar ranking para que aparezca (con 0 pts)
+                fetchLeaderboard();
             }
         } catch (error) {
             console.error("Error creating profile:", error);
@@ -134,25 +157,48 @@ export default function GameHub() {
 
     const handleBackToMenu = () => {
         setActiveGame(null);
-        fetchLeaderboard(); // Refrescar ranking al volver
+        fetchLeaderboard();
     };
 
     const handleWinGame = async (points) => {
-        // Optimistic UI Update
-        const newScore = score + points;
-        setScore(newScore);
+        // ACTUALIZACIÓN MODO VISITANTE
+        // 1. Actualizar estado local de scores por juego
+        const currentGameId = activeGame || 'unknown';
+        const currentGameScore = guestScores[currentGameId] || 0;
+        const newGameScore = currentGameScore + points;
 
+        const newGuestScores = {
+            ...guestScores,
+            [currentGameId]: newGameScore
+        };
+
+        setGuestScores(newGuestScores);
+        sessionStorage.setItem('arcade_guest_scores', JSON.stringify(newGuestScores));
+
+        // 2. Calcular nuevo total visual
+        const totalScore = Object.values(newGuestScores).reduce((a, b) => a + b, 0);
+
+        // Si hay usuario logueado, quizás queramos sumar al servidor también?
+        // El prompt dice "puntos temporales... se sale de la web".
+        // Si hay usuario, el comportamiento anterior era persistir.
+        // Respetaré el comportamiento anterior SOLO si hay usuario explícito.
+        // Si NO hay usuario (null), solo usamos session.
         if (user) {
+            const newTotal = score + points; // Optimistic
+            setScore(newTotal);
             try {
                 await fetch('/api/score', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: user.id, scoreDelta: points })
                 });
-                fetchLeaderboard(); // Actualizar ranking global
+                fetchLeaderboard();
             } catch (error) {
                 console.error("Error submitting score:", error);
             }
+        } else {
+            // Modo Visitante puro
+            setScore(totalScore);
         }
     };
 
@@ -166,7 +212,7 @@ export default function GameHub() {
                 {activeGame ? (
                     <ActiveGameWrapper key="game" gameId={activeGame} onBack={handleBackToMenu} onWin={handleWinGame} />
                 ) : (
-                    <MenuScreen key="menu" onSelectGame={handleSelectGame} score={score} ranking={ranking} />
+                    <MenuScreen key="menu" onSelectGame={handleSelectGame} score={score} ranking={ranking} guestScores={guestScores} />
                 )}
             </AnimatePresence>
             <AnimatePresence>
@@ -177,7 +223,7 @@ export default function GameHub() {
 }
 
 // --- PANTALLAS ---
-function MenuScreen({ onSelectGame, score, ranking }) {
+function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
     const [activeTab, setActiveTab] = useState("games");
 
     return (
@@ -211,7 +257,7 @@ function MenuScreen({ onSelectGame, score, ranking }) {
 
             <div className="flex-1 relative">
                 <AnimatePresence mode="wait">
-                    {activeTab === "games" ? <GamesList key="games" onSelectGame={onSelectGame} /> : <RankingList key="ranking" ranking={ranking} />}
+                    {activeTab === "games" ? <GamesList key="games" onSelectGame={onSelectGame} guestScores={guestScores} /> : <RankingList key="ranking" ranking={ranking} />}
                 </AnimatePresence>
             </div>
         </motion.div>
@@ -227,31 +273,42 @@ function TabButton({ isActive, onClick, icon, label }) {
     );
 }
 
-function GamesList({ onSelectGame }) {
+function GamesList({ onSelectGame, guestScores = {} }) {
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid gap-5">
-            {GAMES_MENU.map((game) => (
-                <motion.button
-                    key={game.id}
-                    whileHover={!game.locked ? { scale: 1.03, x: 5 } : {}}
-                    whileTap={!game.locked ? { scale: 0.98 } : {}}
-                    onClick={() => !game.locked && onSelectGame(game.id)}
-                    className={`relative overflow-hidden w-full p-1 rounded-2xl text-left transition-all group ${game.locked ? 'opacity-50 grayscale cursor-not-allowed' : `${game.glow} hover:shadow-[0_0_50px_rgba(0,255,255,0.4)]`}`}
-                >
-                    <div className={`absolute inset-0 bg-gradient-to-r ${game.colorFrom} ${game.colorTo} via-white/20 opacity-70 rounded-2xl -z-10`}></div>
-                    <div className="bg-slate-950/90 backdrop-blur-xl rounded-xl p-5 h-full w-full border border-white/10 flex items-center gap-5 relative overflow-hidden">
-                        {!game.locked && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out z-0"></div>}
-                        <div className={`p-4 rounded-xl bg-gradient-to-br ${game.colorFrom}/20 ${game.colorTo}/20 shadow-inner border ${game.border} z-10 group-hover:scale-110 transition-transform`}>
-                            <div className={!game.locked ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}>{game.icon}</div>
+            {GAMES_MENU.map((game) => {
+                const gameScore = guestScores[game.id] || 0;
+                return (
+                    <motion.button
+                        key={game.id}
+                        whileHover={!game.locked ? { scale: 1.03, x: 5 } : {}}
+                        whileTap={!game.locked ? { scale: 0.98 } : {}}
+                        onClick={() => !game.locked && onSelectGame(game.id)}
+                        className={`relative overflow-hidden w-full p-1 rounded-2xl text-left transition-all group ${game.locked ? 'opacity-50 grayscale cursor-not-allowed' : `${game.glow} hover:shadow-[0_0_50px_rgba(0,255,255,0.4)]`}`}
+                    >
+                        <div className={`absolute inset-0 bg-gradient-to-r ${game.colorFrom} ${game.colorTo} via-white/20 opacity-70 rounded-2xl -z-10`}></div>
+                        <div className="bg-slate-950/90 backdrop-blur-xl rounded-xl p-5 h-full w-full border border-white/10 flex items-center gap-5 relative overflow-hidden">
+                            {!game.locked && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out z-0"></div>}
+                            <div className={`p-4 rounded-xl bg-gradient-to-br ${game.colorFrom}/20 ${game.colorTo}/20 shadow-inner border ${game.border} z-10 group-hover:scale-110 transition-transform`}>
+                                <div className={!game.locked ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}>{game.icon}</div>
+                            </div>
+                            <div className="flex-1 relative z-10">
+                                <h3 className="font-black text-xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{game.title} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
+                                <p className={`text-xs font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? "ACCESO DENEGADO" : game.desc}</p>
+                            </div>
+
+                            {/* Score Badge */}
+                            {!game.locked && gameScore > 0 && (
+                                <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded-md flex items-center gap-1 z-20">
+                                    <span className="text-[10px] font-black text-yellow-400">{gameScore} PTS</span>
+                                </div>
+                            )}
+
+                            {!game.locked && <ArrowLeft className="w-5 h-5 text-cyan-500 rotate-180 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all z-10" />}
                         </div>
-                        <div className="flex-1 relative z-10">
-                            <h3 className="font-black text-xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{game.title} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
-                            <p className={`text-xs font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? "ACCESO DENEGADO" : game.desc}</p>
-                        </div>
-                        {!game.locked && <ArrowLeft className="w-5 h-5 text-cyan-500 rotate-180 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all z-10" />}
-                    </div>
-                </motion.button>
-            ))}
+                    </motion.button>
+                );
+            })}
         </motion.div>
     );
 }

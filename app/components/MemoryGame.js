@@ -24,7 +24,7 @@ export default function MemoryGame({ onWinGame }) {
 
     // Configuración de Niveles (6 Niveles)
     const LEVELS = {
-        1: { pairs: 8, cols: 4, points: 100, name: "Novato", time: 7 }, // 16 cartas, 4x4
+        1: { pairs: 3, cols: 3, points: 100, name: "Novato", time: 7 }, // 6 cartas, 3x2
         2: { pairs: 8, cols: 4, points: 200, name: "Agente", time: 10 }, // 16 cartas, 4x4
         3: { pairs: 10, cols: 4, points: 300, name: "Ciborg", time: 15 }, // 20 cartas, 4x5
         4: { pairs: 8, cols: 4, points: 400, name: "Hacker", time: 10, maxTime: 45 }, // 16 cartas, Time Limit
@@ -142,7 +142,7 @@ export default function MemoryGame({ onWinGame }) {
                     </div>
                 )}
             </div>
-            <div className="relative w-full aspect-[3/4]">
+            <div className={`relative w-full ${level === 1 ? 'aspect-[3/2]' : 'aspect-[3/4]'}`}>
                 {gameState === 'ready' && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm rounded-xl border border-cyan-500/30">
                         <button
@@ -164,7 +164,7 @@ export default function MemoryGame({ onWinGame }) {
                     </div>
                 )}
 
-                <div className={`grid gap-4 w-full h-full ${level === 1 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                <div className={`grid gap-2 w-full h-full ${level === 1 ? 'grid-cols-3' : 'grid-cols-4'}`}>
                     {cards.map((card) => (
                         <div key={card.uniqueId} onClick={() => handleCardClick(card.uniqueId, card.id)} className="aspect-square relative cursor-pointer group perspective-1000">
                             <motion.div
