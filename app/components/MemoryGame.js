@@ -288,10 +288,11 @@ export default function MemoryGame({ onWinGame }) {
     return (
         <div className="flex flex-col items-center justify-center w-full max-w-md p-4 relative">
 
-            {/* --- BOTÓN DE FEEDBACK (Top Right) --- */}
+            {/* --- BOTÓN DE FEEDBACK (CORREGIDO PARA MÓVIL) --- */}
+            {/* Cambio realizado: De '-top-2 -right-2' a 'top-2 right-2' para que esté DENTRO del contenedor */}
             <button
                 onClick={() => setShowFeedback(true)}
-                className="absolute -top-2 -right-2 z-40 w-10 h-10 bg-slate-800/80 border border-cyan-500/30 text-cyan-400 rounded-full flex items-center justify-center hover:bg-slate-700 hover:scale-105 transition-all shadow-lg"
+                className="absolute top-2 right-2 z-40 w-10 h-10 bg-slate-800/80 border border-cyan-500/30 text-cyan-400 rounded-full flex items-center justify-center hover:bg-slate-700 hover:scale-105 transition-all shadow-lg"
                 title="Enviar sugerencias o reportar errores"
             >
                 <MessageSquare className="w-5 h-5" />
@@ -300,7 +301,7 @@ export default function MemoryGame({ onWinGame }) {
             {/* Header Nivel */}
             <div className="flex flex-col w-full mb-6 items-center justify-center relative">
 
-                {/* --- AQUI ESTÁ EL CAMBIO DE NOMBRE --- */}
+                {/* --- NOMBRE DEL JUEGO --- */}
                 <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 uppercase tracking-wider">
                     MEMORIA NEURAL
                 </h2>
