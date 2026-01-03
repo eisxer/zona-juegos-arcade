@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Gamepad2, Brain, Calculator, ArrowLeft, Lock, Users, Medal, Cpu
+    Gamepad2, Brain, Calculator, ArrowLeft, Lock, Users, Medal, Cpu, ChevronsLeft
 } from "lucide-react";
 import MemoryGame from "./MemoryGame";
 import WordleGame from "./WordleGame";
@@ -342,13 +342,17 @@ function ActiveGameWrapper({ gameId, onBack, onWin }) {
     return (
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }} className="min-h-screen flex flex-col relative z-20 bg-slate-950/90 backdrop-blur-xl">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(6,182,212,0.1)_0%,_transparent_70%)] pointer-events-none"></div>
-            <div className="p-6 pt-8 flex items-center justify-between relative z-10">
-                <button onClick={onBack} className="group p-3 rounded-xl bg-slate-900/80 border border-cyan-900/50 hover:border-cyan-500 transition-all text-cyan-400 flex items-center gap-3 hover:shadow-[0_0_20px_rgba(0,255,255,0.2)]">
-                    <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                    <span className="font-bold text-sm uppercase tracking-widest">Abortar</span>
+            <div className="p-6 pt-8 flex items-center justify-between relative z-10 w-full max-w-4xl mx-auto">
+                <button onClick={onBack} className="group relative flex items-center">
+                    <div className="w-14 h-14 bg-cyan-500 rounded-full flex items-center justify-center z-20 shadow-[0_4px_0_#0891b2] group-hover:translate-y-1 group-hover:shadow-none transition-all cursor-pointer">
+                        <ChevronsLeft className="w-8 h-8 text-white stroke-[3]" />
+                    </div>
+                    <div className="bg-cyan-500 h-10 flex items-center pl-8 pr-6 rounded-r-full -ml-6 z-10 shadow-[0_4px_0_#0891b2] group-hover:translate-y-1 group-hover:shadow-none transition-all cursor-pointer">
+                        <span className="text-white font-black text-lg tracking-wider">SALIR</span>
+                    </div>
                 </button>
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full">
+            <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full pb-20">
                 {gameId === 'memory' && <MemoryGame onWinGame={onWin} />}
                 {gameId === 'wordle' && <WordleGame onWinGame={onWin} />}
                 {gameId === 'math' && <MathGame />}
