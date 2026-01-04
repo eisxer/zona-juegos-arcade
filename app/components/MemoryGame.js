@@ -6,7 +6,7 @@ import confetti from "canvas-confetti";
 import {
     Heart, Star, Zap, Smile, Sun, Music, Cpu, Brain, Eye,
     Gem, Rocket, Atom, Ghost, Anchor, Shield, Tablet, Wifi, Check, Crown,
-    MessageSquare, X, Send, HelpCircle, Lock, Trophy
+    MessageSquare, X, Send, HelpCircle, Lock, Trophy, ArrowRight
 } from "lucide-react";
 // IMPORTAMOS EL HOOK CENTRAL DE PROGRESO
 import useGameProgress from "../hooks/useGameProgress";
