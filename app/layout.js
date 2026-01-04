@@ -12,16 +12,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Arcade Family | Entrenamiento Mental",
-  description: "Plataforma de juegos para la familia",
+  title: "Arcade OS | Entrenamiento Mental",
+  description: "Sistema de entrenamiento cognitivo gamificado.",
+  manifest: "/manifest.json", // <--- 1. Conecta el archivo de instalación
   icons: {
-    icon: "/logo.png",
+    icon: "/logo.png",        // <--- 2. Icono para el navegador
+    apple: "/logo.png",       // <--- 3. Icono para iPhone/iPad
   },
+  themeColor: "#020617",      // <--- 4. Color de la barra de estado del móvil (oscuro)
 };
 
 export default function RootLayout({ children }) {
   return (
-    // 👇 AQUÍ AGREGUÉ "suppressHydrationWarning"
+    // "suppressHydrationWarning" evita errores por extensiones del navegador
     <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
