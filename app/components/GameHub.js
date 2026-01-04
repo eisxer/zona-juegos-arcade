@@ -8,15 +8,16 @@ import {
 import MemoryGame from "./MemoryGame";
 import WordleGame from "./WordleGame";
 import MathGame from "./MathGame";
+import BrandLogo from "./BrandLogo";
 
-// --- DATOS MOCKUP ELIMINADOS ---
+// --- CONFIGURACIÓN DE JUEGOS ---
 
 const GAMES_MENU = [
     {
         id: "memory",
         title: "Memoria Neural",
         desc: "Sincroniza los pares (+100 PTS)",
-        icon: <Brain className="w-8 h-8 text-cyan-300" />,
+        icon: <Brain className="w-8 h-8 md:w-10 md:h-10 text-cyan-300" />, // Iconos más grandes en PC
         colorFrom: "from-cyan-500",
         colorTo: "to-blue-600",
         glow: "shadow-[0_0_30px_rgba(6,182,212,0.5)]",
@@ -27,7 +28,7 @@ const GAMES_MENU = [
         id: "wordle",
         title: "Cripto-Palabra",
         desc: "Desencripta el código (NIVELES)",
-        icon: <Cpu className="w-8 h-8 text-fuchsia-300" />,
+        icon: <Cpu className="w-8 h-8 md:w-10 md:h-10 text-fuchsia-300" />,
         colorFrom: "from-fuchsia-500",
         colorTo: "to-purple-600",
         glow: "shadow-[0_0_30px_rgba(217,70,239,0.5)]",
@@ -38,7 +39,7 @@ const GAMES_MENU = [
         id: "math",
         title: "Procesador Zen",
         desc: "Cálculo de alta velocidad",
-        icon: <Calculator className="w-8 h-8 text-emerald-300" />,
+        icon: <Calculator className="w-8 h-8 md:w-10 md:h-10 text-emerald-300" />,
         colorFrom: "from-emerald-500",
         colorTo: "to-teal-600",
         glow: "shadow-[0_0_30px_rgba(16,185,129,0.5)]",
@@ -62,7 +63,6 @@ export default function GameHub() {
             try {
                 const parsedScores = JSON.parse(storedGuestScores);
                 setGuestScores(parsedScores);
-                // Calcular total
                 const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
                 setScore(total);
             } catch (e) {
@@ -70,14 +70,10 @@ export default function GameHub() {
             }
         }
 
-        // 2. Intentar Cargar Usuario (opcional, no bloqueante)
+        // 2. Intentar Cargar Usuario
         const storedUserId = localStorage.getItem('arcade_user_id');
         if (storedUserId) {
             fetchUser(storedUserId);
-        } else {
-            // Si no hay usuario, estamos en modo visitante por defecto.
-            // No mostramos el setup profile automáticamente.
-            // setShowProfileSetup(true); // DESHABILITADO
         }
 
         // 3. Cargar Ranking Inicial
@@ -90,15 +86,6 @@ export default function GameHub() {
             if (res.ok) {
                 const userData = await res.json();
                 setUser(userData);
-                // Si hay usuario, usamos sus puntos del servidor??
-                // El requerimiento dice "puntos temporales... independiente de cada juego".
-                // Asumiremos que si logueas, usas el sistema completo.
-                // Pero si dice "entrar como visitante", priorizamos el comportamiento "sin usuario".
-                // Dejaremos que si hay usuario, se muestre su score total persistente,
-                // PERO... el usuario pidió "entrar a cualquier juego pero como visitante".
-                // Quizás deberíamos ignorar el login automático para cumplir estrictamente "como visitante".
-                // Pero para no romper la app existente, mantendremos híbrido:
-                // Si ya estabas logueado, genial. Si no, eres visitante.
                 setScore(userData.total_score);
             } else {
                 localStorage.removeItem('arcade_user_id');
@@ -141,7 +128,7 @@ export default function GameHub() {
                 const newUser = await res.json();
                 localStorage.setItem('arcade_user_id', newId);
                 setUser(newUser);
-                setScore(0); // O podríamos importar los puntos de visitante?
+                setScore(0);
                 setShowProfileSetup(false);
                 fetchLeaderboard();
             }
@@ -161,8 +148,6 @@ export default function GameHub() {
     };
 
     const handleWinGame = async (points) => {
-        // ACTUALIZACIÓN MODO VISITANTE
-        // 1. Actualizar estado local de scores por juego
         const currentGameId = activeGame || 'unknown';
         const currentGameScore = guestScores[currentGameId] || 0;
         const newGameScore = currentGameScore + points;
@@ -175,14 +160,8 @@ export default function GameHub() {
         setGuestScores(newGuestScores);
         sessionStorage.setItem('arcade_guest_scores', JSON.stringify(newGuestScores));
 
-        // 2. Calcular nuevo total visual
         const totalScore = Object.values(newGuestScores).reduce((a, b) => a + b, 0);
 
-        // Si hay usuario logueado, quizás queramos sumar al servidor también?
-        // El prompt dice "puntos temporales... se sale de la web".
-        // Si hay usuario, el comportamiento anterior era persistir.
-        // Respetaré el comportamiento anterior SOLO si hay usuario explícito.
-        // Si NO hay usuario (null), solo usamos session.
         if (user) {
             const newTotal = score + points; // Optimistic
             setScore(newTotal);
@@ -197,7 +176,6 @@ export default function GameHub() {
                 console.error("Error submitting score:", error);
             }
         } else {
-            // Modo Visitante puro
             setScore(totalScore);
         }
     };
@@ -222,37 +200,52 @@ export default function GameHub() {
     );
 }
 
-// --- PANTALLAS ---
+// --- PANTALLAS Y COMPONENTES ---
+
 function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
     const [activeTab, setActiveTab] = useState("games");
 
     return (
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-            className="max-w-md mx-auto p-6 min-h-screen flex flex-col relative z-10"
+            className="max-w-md md:max-w-4xl mx-auto p-4 md:p-8 min-h-screen flex flex-col relative z-10"
         >
-            <header className="flex justify-between items-end mb-10 mt-6 relative">
-                <div>
-                    <h1 className="glitch-text text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)] cursor-default">
-                        ARCADE_OS
-                    </h1>
-                    <p className="text-cyan-400/60 text-xs uppercase tracking-[0.2em] mt-1 font-bold">Sistema de Entrenamiento v3.0</p>
+            {/* --- HEADER HÍBRIDO (Pequeño en Móvil / Grande en PC) --- */}
+            <header className="flex justify-between items-center mb-8 mt-4 md:mt-10 relative">
+                <div className="flex items-center gap-2 md:gap-6">
+                    {/* El Logo escala: 75% en móvil, 100% en PC */}
+                    <div className="scale-75 md:scale-100 origin-left">
+                        <BrandLogo />
+                    </div>
+
+                    <div>
+                        {/* Texto: 2xl en móvil -> 5xl en PC */}
+                        <h1 className="glitch-text text-2xl md:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)] cursor-default">
+                            ARCADE_OS
+                        </h1>
+                        {/* Subtítulo: Oculto en móviles muy pequeños, visible normal en PC */}
+                        <p className="text-cyan-400/60 text-[10px] md:text-sm uppercase tracking-[0.2em] mt-1 font-bold hidden xs:block">
+                            Sistema de Entrenamiento v3.0
+                        </p>
+                    </div>
                 </div>
+
+                {/* Score Widget: Pequeño en móvil -> Grande en PC */}
                 <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                    <div className="relative bg-slate-900/80 backdrop-blur-xl border border-yellow-500/30 px-4 py-2 rounded-lg flex items-center gap-3 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                        <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
+                    <div className="relative bg-slate-900/80 backdrop-blur-xl border border-yellow-500/30 px-3 py-1 md:px-5 md:py-3 rounded-lg flex items-center gap-2 md:gap-4 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                        <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
                         <div>
-                            <span className="block text-[10px] text-yellow-500/60 font-bold uppercase tracking-widest">Energía</span>
-                            <span className="font-black text-2xl text-yellow-300 tracking-wider">{score}</span>
+                            <span className="block text-[8px] md:text-[10px] text-yellow-500/60 font-bold uppercase tracking-widest">Energía</span>
+                            <span className="font-black text-lg md:text-3xl text-yellow-300 tracking-wider leading-none">{score}</span>
                         </div>
                     </div>
                 </div>
             </header>
 
             <div className="flex p-1 bg-slate-900/80 backdrop-blur-md rounded-lg mb-8 border border-cyan-500/20 shadow-[inset_0_0_20px_rgba(0,255,255,0.05)] relative overflow-hidden">
-                <TabButton isActive={activeTab === "games"} onClick={() => setActiveTab("games")} icon={<Gamepad2 className="w-5 h-5" />} label="GAMES" />
-                <TabButton isActive={activeTab === "ranking"} onClick={() => setActiveTab("ranking")} icon={<Users className="w-5 h-5" />} label="RANKING" />
+                <TabButton isActive={activeTab === "games"} onClick={() => setActiveTab("games")} icon={<Gamepad2 className="w-5 h-5 md:w-6 md:h-6" />} label="GAMES" />
+                <TabButton isActive={activeTab === "ranking"} onClick={() => setActiveTab("ranking")} icon={<Users className="w-5 h-5 md:w-6 md:h-6" />} label="RANKING" />
             </div>
 
             <div className="flex-1 relative">
@@ -266,7 +259,7 @@ function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
 
 function TabButton({ isActive, onClick, icon, label }) {
     return (
-        <button onClick={onClick} className={`flex-1 py-3 text-sm font-black tracking-widest rounded-md flex items-center justify-center gap-2 transition-all relative z-10 overflow-hidden group ${isActive ? "text-cyan-100 bg-cyan-950/50 shadow-[0_0_15px_rgba(0,255,255,0.2)] border-b-2 border-cyan-400" : "text-slate-500 hover:text-cyan-300 hover:bg-cyan-950/30"}`}>
+        <button onClick={onClick} className={`flex-1 py-3 md:py-4 text-sm md:text-base font-black tracking-widest rounded-md flex items-center justify-center gap-2 transition-all relative z-10 overflow-hidden group ${isActive ? "text-cyan-100 bg-cyan-950/50 shadow-[0_0_15px_rgba(0,255,255,0.2)] border-b-2 border-cyan-400" : "text-slate-500 hover:text-cyan-300 hover:bg-cyan-950/30"}`}>
             {isActive && <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-cyan-500/10 opacity-50 animate-pulse"></div>}
             <span className={`relative z-10 flex items-center gap-2 group-hover:scale-105 transition-transform ${isActive ? 'drop-shadow-[0_0_5px_rgba(0,255,255,0.7)]' : ''}`}>{icon} {label}</span>
         </button>
@@ -275,13 +268,13 @@ function TabButton({ isActive, onClick, icon, label }) {
 
 function GamesList({ onSelectGame, guestScores = {} }) {
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid gap-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid md:grid-cols-2 gap-5">
             {GAMES_MENU.map((game) => {
                 const gameScore = guestScores[game.id] || 0;
                 return (
                     <motion.button
                         key={game.id}
-                        whileHover={!game.locked ? { scale: 1.03, x: 5 } : {}}
+                        whileHover={!game.locked ? { scale: 1.03, y: -5 } : {}}
                         whileTap={!game.locked ? { scale: 0.98 } : {}}
                         onClick={() => !game.locked && onSelectGame(game.id)}
                         className={`relative overflow-hidden w-full p-1 rounded-2xl text-left transition-all group ${game.locked ? 'opacity-50 grayscale cursor-not-allowed' : `${game.glow} hover:shadow-[0_0_50px_rgba(0,255,255,0.4)]`}`}
@@ -293,14 +286,14 @@ function GamesList({ onSelectGame, guestScores = {} }) {
                                 <div className={!game.locked ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}>{game.icon}</div>
                             </div>
                             <div className="flex-1 relative z-10">
-                                <h3 className="font-black text-xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{game.title} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
-                                <p className={`text-xs font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? "ACCESO DENEGADO" : game.desc}</p>
+                                <h3 className="font-black text-xl md:text-2xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{game.title} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
+                                <p className={`text-xs md:text-sm font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? "ACCESO DENEGADO" : game.desc}</p>
                             </div>
 
                             {/* Score Badge */}
                             {!game.locked && gameScore > 0 && (
                                 <div className="absolute top-2 right-2 px-2 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded-md flex items-center gap-1 z-20">
-                                    <span className="text-[10px] font-black text-yellow-400">{gameScore} PTS</span>
+                                    <span className="text-[10px] md:text-xs font-black text-yellow-400">{gameScore} PTS</span>
                                 </div>
                             )}
 
@@ -329,9 +322,9 @@ function RankingList({ ranking }) {
                         <span className="relative z-10">{user.avatar}</span>
                     </div>
                     <div className="flex-1">
-                        <h4 className={`font-bold text-lg ${user.me ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-fuchsia-300' : 'text-white'} uppercase tracking-wider`}>{user.name}</h4>
+                        <h4 className={`font-bold text-lg md:text-xl ${user.me ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-fuchsia-300' : 'text-white'} uppercase tracking-wider`}>{user.name}</h4>
                     </div>
-                    <div className="text-right"><span className={`block font-black text-2xl ${user.rank <= 3 ? 'text-yellow-400' : 'text-cyan-200'} leading-none`}>{user.points}</span><span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">PTS</span></div>
+                    <div className="text-right"><span className={`block font-black text-2xl md:text-3xl ${user.rank <= 3 ? 'text-yellow-400' : 'text-cyan-200'} leading-none`}>{user.points}</span><span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">PTS</span></div>
                 </motion.div>
             ))}
         </motion.div>

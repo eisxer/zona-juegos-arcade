@@ -12,13 +12,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Arcade Family | Entrenamiento Mental", // <--- Mucho mejor
+  title: "Arcade Family | Entrenamiento Mental",
   description: "Plataforma de juegos para la familia",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    // 👇 AQUÍ AGREGUÉ "suppressHydrationWarning"
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
