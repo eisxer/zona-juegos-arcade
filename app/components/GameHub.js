@@ -96,8 +96,10 @@ export default function GameHub() {
             const res = await fetch(`/api/user?id=${userId}`);
             if (res.ok) {
                 const userData = await res.json();
-                setUser(userData);
-                setScore(userData.total_score);
+                if (userData && typeof userData === 'object') {
+                    setUser(userData);
+                    setScore(userData.total_score || 0); // Fallback a 0 si no existe
+                }
             } else {
                 localStorage.removeItem('arcade_user_id');
             }
@@ -111,18 +113,24 @@ export default function GameHub() {
             const res = await fetch('/api/leaderboard');
             if (res.ok) {
                 const data = await res.json();
-                const storedUserId = localStorage.getItem('arcade_user_id');
-                const rankedData = data.map(u => ({
-                    ...u,
-                    name: u.display_name,
-                    points: u.total_score,
-                    avatar: u.avatar_emoji,
-                    me: u.id === storedUserId
-                }));
-                setRanking(rankedData);
+                if (Array.isArray(data)) { // Validación CRÍTICA: Debe ser array
+                    const storedUserId = localStorage.getItem('arcade_user_id');
+                    const rankedData = data.map(u => ({
+                        ...u,
+                        name: u.display_name || 'Anónimo', // Fallback
+                        points: u.total_score || 0,
+                        avatar: u.avatar_emoji || '👾',
+                        me: u.id === storedUserId
+                    }));
+                    setRanking(rankedData);
+                } else {
+                    console.warn("Leaderboard API returned invalid format (not array)");
+                    setRanking([]); // Fallback a lista vacía para evitar crash
+                }
             }
         } catch (error) {
             console.error("Error fetching leaderboard:", error);
+            setRanking([]); // Fallback en error
         }
     };
 
