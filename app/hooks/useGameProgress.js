@@ -14,7 +14,13 @@ export default function useGameProgress() {
     useEffect(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) setProfile(JSON.parse(stored));
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Validar estructura básica antes de usar
+                if (parsed && typeof parsed === 'object') {
+                    setProfile(prev => ({ ...prev, ...parsed }));
+                }
+            }
         } catch (e) {
             console.warn("LocalStorage access failed:", e);
         }

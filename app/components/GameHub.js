@@ -63,9 +63,12 @@ export default function GameHub() {
             if (storedGuestScores) {
                 try {
                     const parsedScores = JSON.parse(storedGuestScores);
-                    setGuestScores(parsedScores);
-                    const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
-                    setScore(total);
+                    // Validar que sea un objeto válido
+                    if (parsedScores && typeof parsedScores === 'object') {
+                        setGuestScores(parsedScores);
+                        const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
+                        setScore(total);
+                    }
                 } catch (e) {
                     console.error("Error parsing guest scores", e);
                 }
