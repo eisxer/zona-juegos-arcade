@@ -56,7 +56,9 @@ export default function MemoryGame({ onWinGame }) {
     // --- EFECTOS DE INICIO ---
     useEffect(() => {
         // Mostrar tutorial si es la primera vez
-        if (!localStorage.getItem('arcade_memory_tutorial_seen')) setShowTutorial(true);
+        try {
+            if (!localStorage.getItem('arcade_memory_tutorial_seen')) setShowTutorial(true);
+        } catch { setShowTutorial(true); }
 
         // Restaurar el último nivel jugado si existe
         if (memoryData.currentLevel) setLevel(memoryData.currentLevel);

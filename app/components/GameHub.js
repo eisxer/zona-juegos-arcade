@@ -58,22 +58,30 @@ export default function GameHub() {
 
     useEffect(() => {
         // 1. Cargar Puntuaciones de Visitante (Session Storage)
-        const storedGuestScores = sessionStorage.getItem('arcade_guest_scores');
-        if (storedGuestScores) {
-            try {
-                const parsedScores = JSON.parse(storedGuestScores);
-                setGuestScores(parsedScores);
-                const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
-                setScore(total);
-            } catch (e) {
-                console.error("Error parsing guest scores", e);
+        try {
+            const storedGuestScores = sessionStorage.getItem('arcade_guest_scores');
+            if (storedGuestScores) {
+                try {
+                    const parsedScores = JSON.parse(storedGuestScores);
+                    setGuestScores(parsedScores);
+                    const total = Object.values(parsedScores).reduce((a, b) => a + b, 0);
+                    setScore(total);
+                } catch (e) {
+                    console.error("Error parsing guest scores", e);
+                }
             }
+        } catch (e) {
+            console.warn("SessionStorage access failed:", e);
         }
 
         // 2. Intentar Cargar Usuario
-        const storedUserId = localStorage.getItem('arcade_user_id');
-        if (storedUserId) {
-            fetchUser(storedUserId);
+        try {
+            const storedUserId = localStorage.getItem('arcade_user_id');
+            if (storedUserId) {
+                fetchUser(storedUserId);
+            }
+        } catch (e) {
+            console.warn("LocalStorage access failed:", e);
         }
 
         // 3. Cargar Ranking Inicial

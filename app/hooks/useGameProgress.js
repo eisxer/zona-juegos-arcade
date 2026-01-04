@@ -12,13 +12,21 @@ export default function useGameProgress() {
 
     // Cargar al inicio
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) setProfile(JSON.parse(stored));
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) setProfile(JSON.parse(stored));
+        } catch (e) {
+            console.warn("LocalStorage access failed:", e);
+        }
     }, []);
 
     // Guardar cambios
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+        } catch (e) {
+            console.warn("LocalStorage save failed:", e);
+        }
     }, [profile]);
 
     // Acción 1: Sumar XP Global (Desde cualquier juego)
