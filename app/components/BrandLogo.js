@@ -1,4 +1,3 @@
-// app/components/BrandLogo.js
 import Image from "next/image";
 
 export default function BrandLogo({ size = "small" }) {
