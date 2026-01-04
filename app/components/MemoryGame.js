@@ -368,15 +368,18 @@ export default function MemoryGame({ onWinGame }) {
                 {/* --- PANTALLA DE INICIO (Selector de Nivel) --- */}
                 <AnimatePresence>
                     {gameState === 'ready' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md rounded-2xl border border-cyan-500/10 p-6 shadow-2xl">
+                        // --- CAMBIO 1: Reduje p-6 a p-4 para ganar espacio vertical ---
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md rounded-2xl border border-cyan-500/10 p-4 shadow-2xl">
 
-                            <div className="text-center mb-8">
+                            {/* --- CAMBIO 2: Reduje mb-8 a mb-4 --- */}
+                            <div className="text-center mb-4">
                                 <span className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.3em] block mb-2 opacity-80">CONFIGURAR SIMULACIÓN</span>
                                 <h2 className="text-xl font-black text-white uppercase tracking-wider">SELECCIONAR NIVEL</h2>
                             </div>
 
                             {/* Selector Horizontal de Niveles */}
-                            <div className="flex items-center justify-center gap-2 mb-10 w-full flex-wrap max-w-[300px] p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+                            {/* --- CAMBIO 3: Aumenté max-w-[300px] a max-w-full y reduje mb-10 a mb-6 --- */}
+                            <div className="flex items-center justify-center gap-2 mb-6 w-full flex-wrap max-w-full p-3 bg-slate-900/50 rounded-xl border border-slate-800">
                                 {[1, 2, 3, 4, 5, 6, 7].map((lvl) => {
                                     const isUnlocked = progress[lvl]?.unlocked || lvl === 1;
                                     const isCurrent = level === lvl;
@@ -385,8 +388,9 @@ export default function MemoryGame({ onWinGame }) {
                                             key={lvl}
                                             onClick={() => selectLevel(lvl)}
                                             disabled={!isUnlocked}
+                                            // --- CAMBIO 4: Reduje ligeramente el tamaño de los botones (w-9 h-9 a w-8 h-8) para asegurar que quepan ---
                                             className={`
-                                                w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black transition-all border relative
+                                                w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black transition-all border relative
                                                 ${isCurrent
                                                     ? "bg-cyan-500 border-cyan-400 text-slate-950 scale-110 shadow-[0_0_15px_rgba(6,182,212,0.5)] z-10"
                                                     : isUnlocked
@@ -395,7 +399,7 @@ export default function MemoryGame({ onWinGame }) {
                                                 }
                                             `}
                                         >
-                                            {isUnlocked ? lvl : <Lock className="w-3.5 h-3.5 opacity-70" />}
+                                            {isUnlocked ? lvl : <Lock className="w-3 h-3 opacity-70" />}
                                             {isCurrent && <div className="absolute inset-0 bg-white/20 animate-pulse rounded-lg"></div>}
                                         </button>
                                     )
