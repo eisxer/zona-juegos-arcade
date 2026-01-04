@@ -10,10 +10,12 @@ import {
 } from "lucide-react";
 // IMPORTAMOS EL HOOK CENTRAL DE PROGRESO
 import useGameProgress from "../hooks/useGameProgress";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function MemoryGame({ onWinGame }) {
     // --- INTEGRACIÓN CON EL HOOK GLOBAL ---
     const { profile, addGlobalXP, saveGameProgress, getGameData } = useGameProgress();
+    const { t } = useLanguage(); // Hook de traducciones
 
     // Recuperamos los datos específicos de este juego ('memory')
     const memoryData = getGameData('memory');
@@ -290,7 +292,7 @@ export default function MemoryGame({ onWinGame }) {
             {/* --- NUEVO: TÍTULO PRINCIPAL DEL JUEGO --- */}
             <div className="w-full text-center mb-4 relative z-30 animate-fade-in-down">
                 <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 uppercase tracking-widest drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                    MEMORIA NEURAL
+                    {t.memory.title}
                 </h1>
             </div>
 
@@ -310,7 +312,7 @@ export default function MemoryGame({ onWinGame }) {
 
                     {/* XP Global Total */}
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-cyan-500/70 leading-none tracking-widest uppercase mb-0.5">AGENTE</span>
+                        <span className="text-[9px] font-bold text-cyan-500/70 leading-none tracking-widest uppercase mb-0.5">{t.memory.agent}</span>
                         <div className="flex items-center gap-1">
                             <span className="text-sm font-black text-white leading-none tracking-wide tabular-nums">
                                 {profile.globalXP.toLocaleString()}
@@ -336,7 +338,7 @@ export default function MemoryGame({ onWinGame }) {
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded-md bg-cyan-950 border border-cyan-500/30 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-                            MISIÓN {level}
+                            {t.memory.mission} {level}
                         </span>
                         <span className="text-xs font-bold text-slate-300 uppercase tracking-wide">{LEVELS[level].name}</span>
                     </div>
@@ -373,8 +375,8 @@ export default function MemoryGame({ onWinGame }) {
 
                             {/* --- CAMBIO 2: Reduje mb-8 a mb-4 --- */}
                             <div className="text-center mb-4">
-                                <span className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.3em] block mb-2 opacity-80">CONFIGURAR SIMULACIÓN</span>
-                                <h2 className="text-xl font-black text-white uppercase tracking-wider">SELECCIONAR NIVEL</h2>
+                                <span className="text-[10px] text-cyan-500 font-bold uppercase tracking-[0.3em] block mb-2 opacity-80">{t.memory.config}</span>
+                                <h2 className="text-xl font-black text-white uppercase tracking-wider">{t.memory.select}</h2>
                             </div>
 
                             {/* Selector Horizontal de Niveles */}
@@ -409,7 +411,7 @@ export default function MemoryGame({ onWinGame }) {
                             {/* Botón Principal de Iniciar */}
                             <button onClick={startGame} className="group relative px-10 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:scale-105 active:scale-95 transition-all overflow-hidden w-full max-w-[220px] tracking-widest border border-cyan-400/50">
                                 <div className="absolute inset-0 bg-white/30 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                                <span className="relative flex items-center justify-center gap-3"><Brain className="w-6 h-6" /> INICIAR</span>
+                                <span className="relative flex items-center justify-center gap-3"><Brain className="w-6 h-6" /> {t.memory.start}</span>
                             </button>
                         </motion.div>
                     )}
@@ -421,7 +423,7 @@ export default function MemoryGame({ onWinGame }) {
                         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="absolute -top-14 left-0 right-0 flex justify-center z-20 pointer-events-none">
                             <div className="px-5 py-1.5 rounded-full bg-slate-900/90 border border-yellow-500/40 text-yellow-400 font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(234,179,8,0.2)] backdrop-blur-sm">
                                 <Eye className="w-4 h-4 animate-pulse" />
-                                <span className="tracking-wide">Memoriza: <span className="font-black text-lg">{timeLeft}</span>s</span>
+                                <span className="tracking-wide">{t.memory.memorize}: <span className="font-black text-lg">{timeLeft}</span>s</span>
                             </div>
                         </motion.div>
                     )}
@@ -449,11 +451,11 @@ export default function MemoryGame({ onWinGame }) {
             {/* --- FOOTER: ESTADÍSTICAS DE LA SESIÓN --- */}
             <div className="w-full grid grid-cols-2 gap-3">
                 <div className="bg-slate-900/40 border border-slate-800/60 p-3 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Puntos Sesión</span>
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">{t.memory.session_points}</span>
                     <span className="text-xl font-black text-white tabular-nums tracking-tight">{totalScore}</span>
                 </div>
                 <div className="bg-slate-900/40 border border-slate-800/60 p-3 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Fallos</span>
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">{t.memory.failures}</span>
                     <span className={`text-xl font-black tabular-nums tracking-tight ${mistakes > 0 ? "text-red-400/90" : "text-slate-400"}`}>{mistakes}</span>
                 </div>
             </div>
@@ -465,27 +467,27 @@ export default function MemoryGame({ onWinGame }) {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
                         <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }} className="w-full max-w-sm bg-slate-900 border border-slate-700/80 rounded-3xl p-6 relative shadow-2xl">
                             <button onClick={() => setShowFeedback(false)} className="absolute top-4 right-4 p-1 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all"><X className="w-5 h-5" /></button>
-                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-cyan-400" /> Enviar Comentarios</h3>
+                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-cyan-400" /> {t.memory.feedback.title}</h3>
                             {feedbackStatus === 'success' ? (
                                 <div className="text-center py-8 flex flex-col items-center justify-center">
                                     <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/30">
                                         <Check className="w-8 h-8 text-emerald-400" />
                                     </div>
-                                    <p className="text-white font-bold text-lg mb-1">¡Mensaje Enviado!</p>
-                                    <p className="text-slate-400 text-sm">Gracias por tu feedback.</p>
+                                    <p className="text-white font-bold text-lg mb-1">{t.memory.feedback.success}</p>
+                                    <p className="text-slate-400 text-sm">{t.memory.feedback.thanks}</p>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSendFeedback} className="flex flex-col gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tipo</label>
-                                        <select value={feedbackType} onChange={e => setFeedbackType(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-cyan-500 outline-none transition-colors appearance-none"><option value="sugerencia">💡 Sugerencia</option><option value="error">🪲 Reportar Error</option></select>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.memory.feedback.type}</label>
+                                        <select value={feedbackType} onChange={e => setFeedbackType(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-cyan-500 outline-none transition-colors appearance-none"><option value="sugerencia">{t.memory.feedback.suggestion}</option><option value="error">{t.memory.feedback.bug}</option></select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mensaje</label>
-                                        <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Escribe aquí tus comentarios..." className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white h-28 resize-none focus:border-cyan-500 outline-none transition-colors" required></textarea>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.memory.feedback.message}</label>
+                                        <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder={t.memory.feedback.placeholder} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white h-28 resize-none focus:border-cyan-500 outline-none transition-colors" required></textarea>
                                     </div>
                                     <button type="submit" disabled={isSendingFeedback} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-xl text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-2">
-                                        {isSendingFeedback ? 'Enviando...' : <><Send className="w-4 h-4" /> Enviar</>}
+                                        {isSendingFeedback ? t.memory.feedback.sending : <><Send className="w-4 h-4" /> {t.memory.feedback.send}</>}
                                     </button>
                                 </form>
                             )}
@@ -522,25 +524,25 @@ export default function MemoryGame({ onWinGame }) {
                         <div className="w-full bg-slate-900 border border-cyan-500/50 p-8 rounded-3xl text-center shadow-[0_0_50px_rgba(6,182,212,0.25)] max-w-xs relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-radial from-cyan-500/10 to-transparent opacity-50 pointer-events-none"></div>
                             <h3 className="text-2xl font-black text-white mb-2 italic uppercase tracking-wider relative z-10">
-                                {(currentWins + 1) === 7 ? "¡MISIÓN CUMPLIDA!" : "¡SISTEMA HACKEADO!"}
+                                {(currentWins + 1) === 7 ? t.memory.victory.mission_complete : t.memory.victory.system_hacked}
                             </h3>
                             <p className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-6 relative z-10 opacity-80">
-                                {currentLoops > 0 ? "Modo Prestigio (50%)" : "Primera Vuelta (100%)"}
+                                {currentLoops > 0 ? t.memory.victory.prestige_mode : t.memory.victory.first_run}
                             </p>
 
                             <div className="my-6 py-5 bg-slate-800/80 rounded-2xl border border-cyan-500/20 relative z-10 shadow-inner">
                                 <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-500 block drop-shadow-sm">+{pointsEarned}</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 block">XP Global Obtenida</span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 block">{t.memory.victory.xp_earned}</span>
                             </div>
 
                             <div className="space-y-3 relative z-10">
                                 {(currentLoops > 0 || (currentWins + 1) === 7) && level < 7 && (
                                     <button onClick={handleNextLevel} className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform animate-pulse-slow border border-orange-400/50">
-                                        <Rocket className="w-4 h-4" /> AVANZAR AL NIVEL {level + 1}
+                                        <Rocket className="w-4 h-4" /> {t.memory.victory.advance_level} {level + 1}
                                     </button>
                                 )}
                                 <button onClick={handleKeepTraining} className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 hover:border-cyan-400/60">
-                                    {(currentWins + 1) === 7 ? <><Crown className="w-4 h-4" /> Reiniciar (Prestigio)</> : "Siguiente Ronda"}
+                                    {(currentWins + 1) === 7 ? <><Crown className="w-4 h-4" /> {t.memory.victory.restart_prestige}</> : t.memory.victory.next_round}
                                 </button>
                             </div>
                         </div>

@@ -9,6 +9,8 @@ import MemoryGame from "./MemoryGame";
 import WordleGame from "./WordleGame";
 import MathGame from "./MathGame";
 import BrandLogo from "./BrandLogo";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSelector from "./LanguageSelector";
 
 // --- CONFIGURACIÓN DE JUEGOS ---
 
@@ -231,6 +233,7 @@ export default function GameHub() {
 
 function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
     const [activeTab, setActiveTab] = useState("games");
+    const { t } = useLanguage(); // Hook para traducciones
 
     return (
         <motion.div
@@ -248,31 +251,36 @@ function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
                     <div>
                         {/* Texto: 2xl en móvil -> 5xl en PC */}
                         <h1 className="glitch-text text-2xl md:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)] cursor-default">
-                            ARCADE_OS
+                            {t.menu.title}
                         </h1>
                         {/* Subtítulo: Oculto en móviles muy pequeños, visible normal en PC */}
                         <p className="text-cyan-400/60 text-[10px] md:text-sm uppercase tracking-[0.2em] mt-1 font-bold hidden xs:block">
-                            Sistema de Entrenamiento v3.0
+                            {t.menu.subtitle}
                         </p>
                     </div>
                 </div>
 
-                {/* Score Widget: Pequeño en móvil -> Grande en PC */}
-                <div className="relative group">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                    <div className="relative bg-slate-900/80 backdrop-blur-xl border border-yellow-500/30 px-3 py-1 md:px-5 md:py-3 rounded-lg flex items-center gap-2 md:gap-4 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                        <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
-                        <div>
-                            <span className="block text-[8px] md:text-[10px] text-yellow-500/60 font-bold uppercase tracking-widest">Energía</span>
-                            <span className="font-black text-lg md:text-3xl text-yellow-300 tracking-wider leading-none">{score}</span>
+                {/* Language Selector + Score Widget */}
+                <div className="flex gap-3 items-center">
+                    <LanguageSelector />
+
+                    {/* Score Widget: Pequeño en móvil -> Grande en PC */}
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative bg-slate-900/80 backdrop-blur-xl border border-yellow-500/30 px-3 py-1 md:px-5 md:py-3 rounded-lg flex items-center gap-2 md:gap-4 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                            <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
+                            <div>
+                                <span className="block text-[8px] md:text-[10px] text-yellow-500/60 font-bold uppercase tracking-widest">{t.menu.energy}</span>
+                                <span className="font-black text-lg md:text-3xl text-yellow-300 tracking-wider leading-none">{score}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </header>
 
             <div className="flex p-1 bg-slate-900/80 backdrop-blur-md rounded-lg mb-8 border border-cyan-500/20 shadow-[inset_0_0_20px_rgba(0,255,255,0.05)] relative overflow-hidden">
-                <TabButton isActive={activeTab === "games"} onClick={() => setActiveTab("games")} icon={<Gamepad2 className="w-5 h-5 md:w-6 md:h-6" />} label="GAMES" />
-                <TabButton isActive={activeTab === "ranking"} onClick={() => setActiveTab("ranking")} icon={<Users className="w-5 h-5 md:w-6 md:h-6" />} label="RANKING" />
+                <TabButton isActive={activeTab === "games"} onClick={() => setActiveTab("games")} icon={<Gamepad2 className="w-5 h-5 md:w-6 md:h-6" />} label={t.menu.games} />
+                <TabButton isActive={activeTab === "ranking"} onClick={() => setActiveTab("ranking")} icon={<Users className="w-5 h-5 md:w-6 md:h-6" />} label={t.menu.ranking} />
             </div>
 
             <div className="flex-1 relative">
@@ -294,10 +302,16 @@ function TabButton({ isActive, onClick, icon, label }) {
 }
 
 function GamesList({ onSelectGame, guestScores = {} }) {
+    const { t } = useLanguage(); // Hook para traducciones
+
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid md:grid-cols-2 gap-5">
             {GAMES_MENU.map((game) => {
                 const gameScore = guestScores[game.id] || 0;
+                // Obtener título y descripción traducidos
+                const gameTitle = game.id === 'memory' ? t.memory.title : game.id === 'wordle' ? t.wordle.title : t.math.title;
+                const gameDesc = game.id === 'memory' ? t.memory.desc : game.id === 'wordle' ? t.wordle.desc : t.math.desc;
+
                 return (
                     <motion.button
                         key={game.id}
@@ -313,8 +327,8 @@ function GamesList({ onSelectGame, guestScores = {} }) {
                                 <div className={!game.locked ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : ""}>{game.icon}</div>
                             </div>
                             <div className="flex-1 relative z-10">
-                                <h3 className="font-black text-xl md:text-2xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{game.title} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
-                                <p className={`text-xs md:text-sm font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? "ACCESO DENEGADO" : game.desc}</p>
+                                <h3 className="font-black text-xl md:text-2xl text-white flex items-center gap-2 mb-1 uppercase tracking-wider">{gameTitle} {game.locked && <Lock className="w-4 h-4 text-slate-500" />}</h3>
+                                <p className={`text-xs md:text-sm font-bold ${game.locked ? "text-slate-500" : "text-cyan-300/70"} uppercase tracking-widest`}>{game.locked ? t.menu.access_denied : gameDesc}</p>
                             </div>
 
                             {/* Score Badge */}
@@ -359,6 +373,8 @@ function RankingList({ ranking }) {
 }
 
 function ActiveGameWrapper({ gameId, onBack, onWin }) {
+    const { t } = useLanguage(); //  Hook para traducciones
+
     return (
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }} className="min-h-screen flex flex-col relative z-20 bg-slate-950/90 backdrop-blur-xl">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(6,182,212,0.1)_0%,_transparent_70%)] pointer-events-none"></div>
@@ -368,7 +384,7 @@ function ActiveGameWrapper({ gameId, onBack, onWin }) {
                         <ChevronsLeft className="w-8 h-8 text-white stroke-[3]" />
                     </div>
                     <div className="bg-cyan-500 h-10 flex items-center pl-8 pr-6 rounded-r-full -ml-6 z-10 shadow-[0_4px_0_#0891b2] group-hover:translate-y-1 group-hover:shadow-none transition-all cursor-pointer">
-                        <span className="text-white font-black text-lg tracking-wider">SALIR</span>
+                        <span className="text-white font-black text-lg tracking-wider">{t.menu.exit}</span>
                     </div>
                 </button>
             </div>
