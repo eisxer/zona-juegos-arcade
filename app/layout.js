@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,6 +24,13 @@ export const metadata = {
   themeColor: "#020617",      // <--- 4. Color de la barra de estado del móvil (oscuro)
 };
 
+export const viewport = {
+  themeColor: "#020617",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     // "suppressHydrationWarning" evita errores por extensiones del navegador
@@ -32,6 +40,7 @@ export default function RootLayout({ children }) {
       >
         <LanguageProvider>
           {children}
+          <ServiceWorkerRegister />
         </LanguageProvider>
       </body>
     </html>

@@ -49,10 +49,10 @@ export default function MemoryGame({ onWinGame }) {
 
     // --- DATOS DEL TUTORIAL ---
     const TUTORIAL_STEPS = [
-        { icon: <Brain className="w-12 h-12 text-cyan-400" />, title: "Objetivo", desc: "Sincroniza tu memoria neural encontrando todos los pares de iconos idénticos." },
-        { icon: <Eye className="w-12 h-12 text-yellow-400" />, title: "Fase de Escaneo", desc: "Tendrás unos segundos iniciales para memorizar la red antes de que se oculte." },
-        { icon: <Rocket className="w-12 h-12 text-orange-400" />, title: "Progresión", desc: "Supera los 7 niveles de dificultad. Completa la barra de cada nivel para ganar bonificaciones." },
-        { icon: <Trophy className="w-12 h-12 text-purple-400" />, title: "XP Global", desc: "Cada punto que ganas aquí se suma a tu Nivel de Agente en toda la plataforma." }
+        { icon: <Brain className="w-12 h-12 text-cyan-400" />, title: t.memory.tutorial.objective_title, desc: t.memory.tutorial.objective_desc },
+        { icon: <Eye className="w-12 h-12 text-yellow-400" />, title: t.memory.tutorial.scan_title, desc: t.memory.tutorial.scan_desc },
+        { icon: <Rocket className="w-12 h-12 text-orange-400" />, title: t.memory.tutorial.progression_title, desc: t.memory.tutorial.progression_desc },
+        { icon: <Trophy className="w-12 h-12 text-purple-400" />, title: t.memory.tutorial.xp_title, desc: t.memory.tutorial.xp_desc }
     ];
 
     // --- EFECTOS DE INICIO ---
@@ -68,13 +68,13 @@ export default function MemoryGame({ onWinGame }) {
 
     // --- CONFIGURACIÓN DE NIVELES ---
     const LEVELS = {
-        1: { pairs: 3, cols: 3, basePoints: 100, bonus: 500, name: "Recluta", time: 7 },
-        2: { pairs: 4, cols: 4, basePoints: 200, bonus: 750, name: "Aprendiz", time: 8 },
-        3: { pairs: 5, cols: 4, basePoints: 300, bonus: 1000, name: "Agente", time: 10 },
-        4: { pairs: 6, cols: 4, basePoints: 400, bonus: 1250, name: "Hacker", time: 12 },
-        5: { pairs: 7, cols: 4, basePoints: 500, bonus: 1500, name: "Maestro", time: 15 },
-        6: { pairs: 8, cols: 4, basePoints: 600, bonus: 1750, name: "Leyenda", time: 18 },
-        7: { pairs: 9, cols: 5, basePoints: 700, bonus: 2000, name: "Omnisciente", time: 20 },
+        1: { pairs: 3, cols: 3, basePoints: 100, bonus: 500, name: t.memory.levels[1], time: 7 },
+        2: { pairs: 4, cols: 4, basePoints: 200, bonus: 750, name: t.memory.levels[2], time: 8 },
+        3: { pairs: 5, cols: 4, basePoints: 300, bonus: 1000, name: t.memory.levels[3], time: 10 },
+        4: { pairs: 6, cols: 4, basePoints: 400, bonus: 1250, name: t.memory.levels[4], time: 12 },
+        5: { pairs: 7, cols: 4, basePoints: 500, bonus: 1500, name: t.memory.levels[5], time: 15 },
+        6: { pairs: 8, cols: 4, basePoints: 600, bonus: 1750, name: t.memory.levels[6], time: 18 },
+        7: { pairs: 9, cols: 5, basePoints: 700, bonus: 2000, name: t.memory.levels[7], time: 20 },
     };
 
     // --- ICONOS DEL JUEGO ---
@@ -508,10 +508,10 @@ export default function MemoryGame({ onWinGame }) {
                             <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-wide">{TUTORIAL_STEPS[tutorialStep].title}</h3>
                             <p className="text-slate-400 text-sm leading-relaxed mb-10 px-2">{TUTORIAL_STEPS[tutorialStep].desc}</p>
                             <div className="flex items-center justify-between bg-slate-950/50 p-2 rounded-full border border-slate-800">
-                                <button onClick={() => { localStorage.setItem('arcade_memory_tutorial_seen', 'true'); setShowTutorial(false); }} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider transition-colors">Saltar</button>
+                                <button onClick={() => { localStorage.setItem('arcade_memory_tutorial_seen', 'true'); setShowTutorial(false); }} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-white uppercase tracking-wider transition-colors">{t.memory.tutorial.skip}</button>
                                 <div className="flex gap-1.5 items-center">{TUTORIAL_STEPS.map((_, i) => <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tutorialStep ? "bg-cyan-400 w-6" : "bg-slate-700 w-1.5"}`} />)}</div>
                                 <button onClick={() => { if (tutorialStep < TUTORIAL_STEPS.length - 1) setTutorialStep(p => p + 1); else { localStorage.setItem('arcade_memory_tutorial_seen', 'true'); setShowTutorial(false); } }} className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold rounded-full text-sm transition-all shadow-md flex items-center gap-1">
-                                    {tutorialStep === TUTORIAL_STEPS.length - 1 ? "Empezar" : "Siguiente"} <ArrowRight className="w-3.5 h-3.5" />
+                                    {tutorialStep === TUTORIAL_STEPS.length - 1 ? t.memory.tutorial.start : t.memory.tutorial.next} <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </motion.div>

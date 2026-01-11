@@ -71,10 +71,16 @@ export const translations = {
         wordle: {
             title: "CRIPTO-PALABRA",
             desc: "Desencripta el código (NIVELES)",
-            level: "NIVEL",
-            novice: "NOVATO (4 LETRAS)",
-            hacker: "HACKER (5 LETRAS)",
-            master: "MAESTRO (6 LETRAS)",
+            desc: "Desencripta el código (NIVELES)",
+            levels: {
+                1: "Novato (4 Letras)",
+                2: "Aprendiz (4 Letras)",
+                3: "Explorador (5 Letras)",
+                4: "Hacker (5 Letras)",
+                5: "Maestro (6 Letras)",
+                6: "Leyenda (6 Letras)",
+                7: "Omnisciente (7 Letras)"
+            },
             level_progress: "PROGRESO DE NIVEL",
             confirm_code: "Confirmar Código",
             next_mission: "Siguiente Misión",
@@ -172,10 +178,16 @@ export const translations = {
         wordle: {
             title: "CRYPTO-WORD",
             desc: "Decrypt the code (LEVELS)",
-            level: "LEVEL",
-            novice: "NOVICE (4 LETTERS)",
-            hacker: "HACKER (5 LETTERS)",
-            master: "MASTER (6 LETTERS)",
+            desc: "Decrypt the code (LEVELS)",
+            levels: {
+                1: "Novice (4 Letters)",
+                2: "Apprentice (4 Letters)",
+                3: "Explorer (5 Letters)",
+                4: "Hacker (5 Letters)",
+                5: "Master (6 Letters)",
+                6: "Legend (6 Letters)",
+                7: "Omniscient (7 Letters)"
+            },
             level_progress: "LEVEL PROGRESS",
             confirm_code: "Confirm Code",
             next_mission: "Next Mission",
