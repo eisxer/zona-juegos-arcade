@@ -309,10 +309,7 @@ function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
                         Eisner 🚀
                     </span>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                    <Lock className="w-3 h-3" />
-                    <span>Conexión Segura SSL</span>
-                </div>
+
             </footer>
         </motion.div>
     );
