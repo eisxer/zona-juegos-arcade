@@ -120,7 +120,8 @@ export const translations = {
             game_over: "TERMINADO",
             final_score: "Puntaje Final",
             retry: "REINTENTAR",
-            waiting: "SISTEMA EN ESPERA..."
+            waiting: "SISTEMA EN ESPERA...",
+            next_phase: "FASE SIGUIENTE"
         },
         colors: {
             blue: "AZUL",
@@ -259,7 +260,8 @@ export const translations = {
             game_over: "GAME OVER",
             final_score: "Final Score",
             retry: "RETRY",
-            waiting: "SYSTEM STANDBY..."
+            waiting: "SYSTEM STANDBY...",
+            next_phase: "NEXT PHASE"
         },
         colors: {
             blue: "BLUE",
