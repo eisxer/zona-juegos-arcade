@@ -20,9 +20,9 @@ const COLORS = [
 
 // Difficulty Levels
 const LEVELS = [
-    { id: 1, name: "Motor Cortex", spawnRateMod: 1.0, complexity: 1 },
-    { id: 2, name: "Visual Cortex", spawnRateMod: 0.8, complexity: 2 },
-    { id: 3, name: "Prefrontal", spawnRateMod: 0.6, complexity: 3 }
+    { id: 1, name: "Motor Cortex", spawnRateMod: 1.0, complexity: 1, trapChance: 0.1 },
+    { id: 2, name: "Visual Cortex", spawnRateMod: 0.7, complexity: 2, trapChance: 0.3 },
+    { id: 3, name: "Prefrontal", spawnRateMod: 0.4, complexity: 3, trapChance: 0.6 }
 ];
 
 export default function NeuralFlashGame({ onWinGame }) {
@@ -39,6 +39,7 @@ export default function NeuralFlashGame({ onWinGame }) {
     const [timeLeft, setTimeLeft] = useState(60);
     const [instruction, setInstruction] = useState(null);
     const [lastReactionTime, setLastReactionTime] = useState(null);
+    const [shake, setShake] = useState(0);
 
     // Objects
     const targets = useRef([]);
@@ -47,8 +48,20 @@ export default function NeuralFlashGame({ onWinGame }) {
     // --- LOGIC ---
 
     const spawnTarget = useCallback(() => {
-        const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const currentLevel = LEVELS[level - 1];
+        let shape, color;
+
+        // Lógica inteligente: Probabilidad de spawnear una "trampa" basada en la instrucción
+        if (instruction && Math.random() < currentLevel.trapChance) {
+            shape = instruction.type === "shape" ? instruction.value : SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            color = instruction.type === "color"
+                ? COLORS.find(c => c.name === instruction.value)
+                : COLORS[Math.floor(Math.random() * COLORS.length)];
+        } else {
+            shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        }
+
         const size = 35; // Fixed size for cleaner look
         // Keep within bounds padding
         const padding = 60;
@@ -62,48 +75,32 @@ export default function NeuralFlashGame({ onWinGame }) {
             shape,
             color,
             createdAt: performance.now(),
-            lifeTime: TARGET_LIFETIME * (LEVELS[level - 1].spawnRateMod),
+            lifeTime: TARGET_LIFETIME * currentLevel.spawnRateMod,
             scale: 0,
             rotation: Math.random() * Math.PI * 2
         });
-    }, [level]);
+    }, [level, instruction]);
 
     const updateInstruction = useCallback(() => {
-        const type = Math.random() > 0.5 ? "color" : "shape";
-        let newInstruction = {};
+        const isColor = Math.random() > 0.5;
+        const isNegative = level === 3 && Math.random() > 0.6; // Solo negativas en nivel 3
 
-        if (level === 1) {
-            const targetColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-            newInstruction = { type: "color", value: targetColor.name, label: targetColor.name.toUpperCase(), negative: false, colorHex: targetColor.hex };
-        } else if (level === 2) {
-            if (Math.random() > 0.5) {
-                const targetColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-                newInstruction = { type: "color", value: targetColor.name, label: targetColor.name.toUpperCase(), negative: false, colorHex: targetColor.hex };
-            } else {
-                const targetShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-                newInstruction = { type: "shape", value: targetShape, label: targetShape.toUpperCase(), negative: false };
-            }
-        } else {
-            const isNegative = Math.random() > 0.7;
-            if (Math.random() > 0.5) {
-                const targetColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-                newInstruction = {
-                    type: "color",
-                    value: targetColor.name,
-                    label: isNegative ? `NO ${targetColor.name.toUpperCase()}` : targetColor.name.toUpperCase(),
-                    negative: isNegative,
-                    colorHex: targetColor.hex
-                };
-            } else {
-                const targetShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-                newInstruction = {
-                    type: "shape",
-                    value: targetShape,
-                    label: isNegative ? `NO ${targetShape.toUpperCase()}` : targetShape.toUpperCase(),
-                    negative: isNegative
-                };
-            }
+        let newInstruction = {
+            type: isColor ? "color" : "shape",
+            negative: isNegative,
+            value: isColor
+                ? COLORS[Math.floor(Math.random() * COLORS.length)].name
+                : SHAPES[Math.floor(Math.random() * SHAPES.length)]
+        };
+
+        // Formatear el label para el usuario
+        const baseLabel = newInstruction.value.toUpperCase();
+        newInstruction.label = isNegative ? `NO ${baseLabel}` : baseLabel;
+
+        if (isColor) {
+            newInstruction.colorHex = COLORS.find(c => c.name === newInstruction.value).hex;
         }
+
         setInstruction(newInstruction);
     }, [level]);
 
@@ -304,7 +301,7 @@ export default function NeuralFlashGame({ onWinGame }) {
             const t = targets.current[i];
             const dist = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
 
-            if (dist < t.size * 1.5) { // Hitbox forgiving
+            if (dist < t.size * 1.2) { // Hitbox precise
                 const matches = checkCondition(t, instruction);
                 if (matches) {
                     handleHit(t, i);
@@ -341,6 +338,8 @@ export default function NeuralFlashGame({ onWinGame }) {
             return newLives;
         });
         setScore(prev => Math.max(0, prev - 50));
+        setShake(20); // Screen shake intensity
+        setTimeout(() => setShake(0), 500);
     };
 
     return (
@@ -400,7 +399,11 @@ export default function NeuralFlashGame({ onWinGame }) {
             </div>
 
             {/* --- GAME FRAME --- */}
-            <div className="relative w-full aspect-[4/3] max-h-[600px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group">
+            <motion.div
+                animate={{ x: shake > 0 ? [0, -10, 10, -10, 10, 0] : 0 }}
+                transition={{ duration: 0.4 }}
+                className={`relative w-full aspect-[4/3] max-h-[600px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group ${shake > 0 ? 'border-red-500 shadow-red-500/50' : ''}`}
+            >
 
                 {/* Tech Corners (Decorative) */}
                 <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-2xl"></div>
@@ -464,7 +467,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                         </div>
                     )}
                 </AnimatePresence>
-            </div>
+            </motion.div>
 
             {/* --- BOTTOM HUD --- */}
             <div className="flex items-center gap-8 text-cyan-500/80">
