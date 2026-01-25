@@ -300,6 +300,20 @@ function MenuScreen({ onSelectGame, score, ranking, guestScores }) {
                     {activeTab === "games" ? <GamesList key="games" onSelectGame={onSelectGame} guestScores={guestScores} /> : <RankingList key="ranking" ranking={ranking} />}
                 </AnimatePresence>
             </div>
+            {/* --- FOOTER --- */}
+            <footer className="mt-12 mb-4 text-center space-y-2 opacity-60 hover:opacity-100 transition-opacity pb-safe">
+                <p className="text-xs text-slate-500 font-medium">© 2025-2026 Gameisxer</p>
+                <div className="flex items-center justify-center gap-1.5">
+                    <span className="text-sm font-bold text-slate-400">Dev:</span>
+                    <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center gap-1">
+                        Eisner 🚀
+                    </span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+                    <Lock className="w-3 h-3" />
+                    <span>Conexión Segura SSL</span>
+                </div>
+            </footer>
         </motion.div>
     );
 }
