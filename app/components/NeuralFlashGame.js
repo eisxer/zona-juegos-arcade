@@ -20,9 +20,9 @@ const COLORS = [
 
 // Difficulty Levels
 const LEVELS = [
-    { id: 1, name: "Motor Cortex", spawnRateMod: 1.0, complexity: 1, trapChance: 0.1 },
-    { id: 2, name: "Visual Cortex", spawnRateMod: 0.7, complexity: 2, trapChance: 0.3 },
-    { id: 3, name: "Prefrontal", spawnRateMod: 0.4, complexity: 3, trapChance: 0.6 }
+    { id: 1, spawnRateMod: 1.0, complexity: 1, trapChance: 0.1 },
+    { id: 2, spawnRateMod: 0.7, complexity: 2, trapChance: 0.3 },
+    { id: 3, spawnRateMod: 0.4, complexity: 3, trapChance: 0.6 }
 ];
 
 export default function NeuralFlashGame({ onWinGame }) {
@@ -93,16 +93,18 @@ export default function NeuralFlashGame({ onWinGame }) {
                 : SHAPES[Math.floor(Math.random() * SHAPES.length)]
         };
 
-        // Formatear el label para el usuario
-        const baseLabel = newInstruction.value.toUpperCase();
-        newInstruction.label = isNegative ? `NO ${baseLabel}` : baseLabel;
+        // Formatear el label para el usuario usando traducciones
+        const rawValue = newInstruction.value; // 'red', 'circle', etc.
+        const translatedValue = isColor ? t.colors[rawValue] : t.shapes[rawValue];
+
+        newInstruction.label = isNegative ? `${t.game.not} ${translatedValue}` : translatedValue;
 
         if (isColor) {
             newInstruction.colorHex = COLORS.find(c => c.name === newInstruction.value).hex;
         }
 
         setInstruction(newInstruction);
-    }, [level]);
+    }, [level, t]);
 
     // Draw Helper
     const drawPolygon = (ctx, x, y, radius, sides, rotation, color, fill = false) => {
@@ -350,7 +352,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                 {/* Score Panel */}
                 <div className="flex flex-col gap-1 w-64">
                     <div className="flex justify-between text-cyan-400 text-xs tracking-[0.2em] font-bold">
-                        <span className="flex items-center gap-2"><Trophy className="w-4 h-4" /> PUNTAJE</span>
+                        <span className="flex items-center gap-2"><Trophy className="w-4 h-4" /> {t.neural.score}</span>
                         <span>{score}</span>
                     </div>
                     <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
@@ -379,7 +381,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                             <div className="absolute bottom-0 right-0 w-2 h-2 bg-current animate-ping"></div>
                         </motion.div>
                     ) : (
-                        <div className="text-slate-600 text-sm tracking-widest">SISTEMA EN ESPERA...</div>
+                        <div className="text-slate-600 text-sm tracking-widest">{t.neural.waiting}</div>
                     )}
                 </AnimatePresence>
 
@@ -387,7 +389,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                 <div className="flex flex-col gap-1 w-64 items-end">
                     <div className="flex justify-between w-full text-cyan-400 text-xs tracking-[0.2em] font-bold">
                         <span>{timeLeft}s</span>
-                        <span className="flex items-center gap-2">TIEMPO <Clock className="w-4 h-4" /></span>
+                        <span className="flex items-center gap-2">{t.neural.time} <Clock className="w-4 h-4" /></span>
                     </div>
                     <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                         <motion.div
@@ -396,17 +398,18 @@ export default function NeuralFlashGame({ onWinGame }) {
                         ></motion.div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* --- GAME FRAME --- */}
-            <motion.div
-                animate={{ x: shake > 0 ? [0, -10, 10, -10, 10, 0] : 0 }}
+            < motion.div
+                animate={{ x: shake > 0 ? [0, -10, 10, -10, 10, 0] : 0 }
+                }
                 transition={{ duration: 0.4 }}
                 className={`relative w-full aspect-[4/3] max-h-[600px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group ${shake > 0 ? 'border-red-500 shadow-red-500/50' : ''}`}
             >
 
                 {/* Tech Corners (Decorative) */}
-                <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-2xl"></div>
+                < div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-2xl" ></div >
                 <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-cyan-500/50 rounded-tr-2xl"></div>
                 <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-cyan-500/50 rounded-bl-2xl"></div>
                 <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-cyan-500/50 rounded-br-2xl"></div>
@@ -436,7 +439,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                                 <div className="absolute inset-0 bg-cyan-500 blur-xl opacity-50 group-hover:opacity-80 transition-opacity"></div>
                                 <div className="relative bg-black border-2 border-cyan-400 px-12 py-6 rounded-lg flex items-center gap-4">
                                     <ScanLine className="w-8 h-8 text-cyan-400" />
-                                    <span className="text-3xl font-black italic text-white tracking-widest">INICIAR<span className="text-cyan-400">_</span></span>
+                                    <span className="text-3xl font-black italic text-white tracking-widest">{t.neural.start}<span className="text-cyan-400">_</span></span>
                                 </div>
                             </motion.button>
                             <div className="mt-8 flex gap-4">
@@ -446,7 +449,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                                         onClick={() => setLevel(l.id)}
                                         className={`px-4 py-2 border rounded text-xs font-bold uppercase tracking-widest transition-all ${level === l.id ? 'border-cyan-400 text-cyan-400 bg-cyan-950' : 'border-slate-700 text-slate-600 hover:border-slate-500'}`}
                                     >
-                                        L{l.id} {l.name}
+                                        L{l.id} {t.neural.levels[l.id]}
                                     </button>
                                 ))}
                             </div>
@@ -456,23 +459,23 @@ export default function NeuralFlashGame({ onWinGame }) {
                     {gameState === "GAME_OVER" && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md text-center">
                             <div className="text-6xl mb-4">💀</div>
-                            <h2 className="text-4xl font-black text-red-500 tracking-[0.5em] mb-2 uppercase">TERMINADO</h2>
-                            <p className="text-slate-400 mb-8 font-mono">Puntaje Final: {score}</p>
+                            <h2 className="text-4xl font-black text-red-500 tracking-[0.5em] mb-2 uppercase">{t.neural.game_over}</h2>
+                            <p className="text-slate-400 mb-8 font-mono">{t.neural.final_score}: {score}</p>
                             <button
                                 onClick={() => setGameState("IDLE")}
                                 className="px-8 py-3 border border-red-500/50 text-red-400 hover:bg-red-950/30 rounded font-bold tracking-widest uppercase transition-colors"
                             >
-                                Reintentar
+                                {t.neural.retry}
                             </button>
                         </div>
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </motion.div >
 
             {/* --- BOTTOM HUD --- */}
-            <div className="flex items-center gap-8 text-cyan-500/80">
+            < div className="flex items-center gap-8 text-cyan-500/80" >
                 <div className="flex items-center gap-2 bg-slate-900 border border-cyan-900/50 px-6 py-2 rounded-full shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">REACCIÓN</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{t.neural.reaction}</span>
                     <span className="text-xl font-mono text-white">
                         {lastReactionTime ? `${(lastReactionTime / 1000).toFixed(3)}s` : '---'}
                     </span>
@@ -486,8 +489,8 @@ export default function NeuralFlashGame({ onWinGame }) {
                         />
                     ))}
                 </div>
-            </div>
+            </div >
 
-        </div>
+        </div >
     );
 }

@@ -113,7 +113,26 @@ export const translations = {
                 1: "Corteza Motora",
                 2: "Corteza Visual",
                 3: "Prefrontal"
-            }
+            },
+            score: "PUNTAJE",
+            time: "TIEMPO",
+            reaction: "REACCIÓN",
+            game_over: "TERMINADO",
+            final_score: "Puntaje Final",
+            retry: "REINTENTAR",
+            waiting: "SISTEMA EN ESPERA..."
+        },
+        colors: {
+            blue: "AZUL",
+            red: "ROJO",
+            green: "VERDE",
+            purple: "VIOLETA"
+        },
+        shapes: {
+            circle: "CÍRCULO",
+            square: "CUADRADO",
+            triangle: "TRIÁNGULO",
+            hexagon: "HEXÁGONO"
         },
         game: {
             not: "NO"
@@ -233,7 +252,26 @@ export const translations = {
                 1: "Motor Cortex",
                 2: "Visual Cortex",
                 3: "Prefrontal"
-            }
+            },
+            score: "SCORE",
+            time: "TIME",
+            reaction: "REACTION",
+            game_over: "GAME OVER",
+            final_score: "Final Score",
+            retry: "RETRY",
+            waiting: "SYSTEM STANDBY..."
+        },
+        colors: {
+            blue: "BLUE",
+            red: "RED",
+            green: "GREEN",
+            purple: "PURPLE"
+        },
+        shapes: {
+            circle: "CIRCLE",
+            square: "SQUARE",
+            triangle: "TRIANGLE",
+            hexagon: "HEXAGON"
         },
         game: {
             not: "NOT"
