@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, RotateCcw, Zap, Heart, Clock, Trophy, ScanLine } from "lucide-react";
+import { Play, Pause, Zap, Heart, Clock, Trophy, ScanLine, HeartCrack } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 
 // --- CONSTANTS & CONFIG ---
@@ -24,7 +24,7 @@ const LEVEL_MAP = {
         isMultiPhase: true,
         phases: [
             { id: "1.1", duration: 15, forceShape: "circle", forceColor: null, speedMult: 1, label: "COLOR FOCUS" },
-            { id: "1.2", duration: 15, forceShape: null, forceColor: "red", speedMult: 1, label: "SHAPE FOCUS" }, // Using 'red' as example fixed color
+            { id: "1.2", duration: 15, forceShape: null, forceColor: "red", speedMult: 1, label: "SHAPE FOCUS" },
             { id: "1.3", duration: 15, forceShape: "circle", forceColor: null, speedMult: 2, label: "SPEED BURST" },
             { id: "1.4", duration: 15, forceShape: null, forceColor: null, speedMult: 1.2, label: "DISTRACTION" }
         ]
@@ -41,16 +41,16 @@ export default function NeuralFlashGame({ onWinGame }) {
     const requestRef = useRef();
 
     // Game State
+    // States: IDLE, PLAYING, PAUSED, PHASE_TRANSITION, GAME_OVER
     const [gameState, setGameState] = useState("IDLE");
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(3);
-    const [timeLeft, setTimeLeft] = useState(60); // Total level time
+    const [timeLeft, setTimeLeft] = useState(60);
     const [instruction, setInstruction] = useState(null);
     const [lastReactionTime, setLastReactionTime] = useState(null);
     const [shake, setShake] = useState(0);
     const [phaseIndex, setPhaseIndex] = useState(0);
-    const [showingPhaseTitle, setShowingPhaseTitle] = useState(false);
 
     // Combo System
     const [combo, setCombo] = useState(0);
@@ -58,10 +58,27 @@ export default function NeuralFlashGame({ onWinGame }) {
     // Objects
     const targets = useRef([]);
     const particles = useRef([]);
-    const phaseTimerRef = useRef(null);
 
-    // --- LOGIC ---
+    // Logic to resume game from pause/transition
+    const resumeGame = () => {
+        setGameState("PLAYING");
+    };
 
+    const pauseGame = () => {
+        if (gameState === "PLAYING") setGameState("PAUSED");
+    };
+
+    const startNextPhase = () => {
+        // Increment phase index here
+        let nextIndex = phaseIndex + 1;
+        if (nextIndex >= LEVEL_MAP[1].phases.length) {
+            nextIndex = 0; // Loop or Finish? Looping for now as per previous logic
+        }
+        setPhaseIndex(nextIndex);
+        setGameState("PLAYING");
+    };
+
+    // --- SPAWNING LOGIC ---
     const spawnTarget = useCallback(() => {
         const currentLevelConfig = LEVEL_MAP[level];
         let shape, color;
@@ -70,40 +87,30 @@ export default function NeuralFlashGame({ onWinGame }) {
 
         if (level === 1) {
             const currentPhase = currentLevelConfig.phases[phaseIndex];
-            if (!currentPhase) return; // Safety check
+            if (!currentPhase) return;
 
             shape = currentPhase.forceShape ? currentPhase.forceShape : SHAPES[Math.floor(Math.random() * SHAPES.length)];
 
             if (currentPhase.forceColor) {
-                // Find the color object matching the forced color name or generic gray if not found
                 color = COLORS.find(c => c.name === currentPhase.forceColor) || { name: "gray", hex: "#888888", glow: "rgba(136, 136, 136, 0.6)" };
             } else {
                 color = COLORS[Math.floor(Math.random() * COLORS.length)];
             }
             speedMult = currentPhase.speedMult;
         } else {
-            // Levels 2-5
-            // Movement logic for L4/L5
             if (currentLevelConfig.movement) movementType = currentLevelConfig.movement;
 
-            // Trap logic for L2-L5
             if (instruction && Math.random() < currentLevelConfig.trapChance) {
-                // Generate TRAP (contradicts instruction)
-                if (level === 3) { // Negative Logic: Trap is the target itself (since instruction is NO X)
-                    // Actually for "NO X", a trap is X.
+                if (level === 3) {
                     shape = instruction.type === "shape" ? instruction.value : SHAPES[Math.floor(Math.random() * SHAPES.length)];
                     color = instruction.type === "color"
                         ? COLORS.find(c => c.name === instruction.value)
                         : COLORS[Math.floor(Math.random() * COLORS.length)];
-                } else { // Normal Logic: Trap is NOT the target
-                    // This simple logic might need refinement for dual task
+                } else {
                     shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
                     color = COLORS[Math.floor(Math.random() * COLORS.length)];
-                    // Ensure it's NOT a match (simplified)
                 }
             } else {
-                // Generate VALID TARGET
-                // Needs to match instruction
                 if (instruction) {
                     if (instruction.type === 'color') {
                         color = COLORS.find(c => c.name === instruction.value);
@@ -112,12 +119,9 @@ export default function NeuralFlashGame({ onWinGame }) {
                         shape = instruction.value;
                         color = COLORS[Math.floor(Math.random() * COLORS.length)];
                     } else if (instruction.type === 'dual') {
-                        // instruction.value is {color: 'red', shape: 'circle'}
                         color = COLORS.find(c => c.name === instruction.value.color);
                         shape = instruction.value.shape;
                     }
-
-                    // Fallback for color if undefined (e.g. negative logic instruction doesn't enforce color)
                     if (!color) color = COLORS[Math.floor(Math.random() * COLORS.length)];
                     if (!shape) shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
                 } else {
@@ -127,12 +131,29 @@ export default function NeuralFlashGame({ onWinGame }) {
             }
         }
 
+        let x, y, safe;
+        let attempts = 0;
         const size = 35;
         const padding = 60;
-        const x = Math.random() * (CANVAS_WIDTH - padding * 2) + padding;
-        const y = Math.random() * (CANVAS_HEIGHT - padding * 2) + padding;
 
-        // Velocity for Kinetic Levels
+        // Overlap Check Loop
+        do {
+            x = Math.random() * (CANVAS_WIDTH - padding * 2) + padding;
+            y = Math.random() * (CANVAS_HEIGHT - padding * 2) + padding;
+            safe = true;
+
+            for (const t of targets.current) {
+                const dist = Math.sqrt((x - t.x) ** 2 + (y - t.y) ** 2);
+                if (dist < (size + t.size) * 1.2) { // 20% margin
+                    safe = false;
+                    break;
+                }
+            }
+            attempts++;
+        } while (!safe && attempts < 10);
+
+        if (!safe) return; // Skip spawn if no space found
+
         let vx = 0, vy = 0;
         if (movementType === 'linear' || movementType === 'bouncing') {
             vx = (Math.random() - 0.5) * 4;
@@ -146,50 +167,39 @@ export default function NeuralFlashGame({ onWinGame }) {
             shape,
             color,
             createdAt: performance.now(),
-            lifeTime: (TARGET_LIFETIME * (1 / speedMult)), // speedMult divides lifetime
+            lifeTime: (TARGET_LIFETIME * (1 / speedMult)),
             scale: 0,
             rotation: Math.random() * Math.PI * 2,
             movementType
         });
     }, [level, phaseIndex, instruction]);
 
-    // Instruction Logic
+    // Instruction Update Logic
     const updateInstruction = useCallback(() => {
         if (level === 1) {
-            // Level 1: Static instructions per phase
             const phase = LEVEL_MAP[1].phases[phaseIndex];
             if (!phase) return;
 
-            // 1.1 Color Focus
             if (phaseIndex === 0) {
-                setInstruction({ type: "color", value: "blue", label: t.colors.blue, negative: false, colorHex: "#00f0ff" }); // Example: Always Blue for consistency? Or Random? Spec says "Color Focus", implies random instruction "COLOR".
-                // Let's implement: Instruction says "RED", you click only RED.
-                // The 'spawnTarget' is forcing shapes, but here we define the rule.
-                // Wait, spec says: 1.1 "Instruction: COLOR".
                 const targetColor = COLORS[Math.floor(Math.random() * COLORS.length)];
                 setInstruction({ type: "color", value: targetColor.name, label: t.colors[targetColor.name], negative: false, colorHex: targetColor.hex });
             }
-            // 1.2 Shape Focus
             else if (phaseIndex === 1) {
                 const targetShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
                 setInstruction({ type: "shape", value: targetShape, label: t.shapes[targetShape], negative: false });
             }
-            // 1.3 Speed Burst (Color)
             else if (phaseIndex === 2) {
                 const targetColor = COLORS[Math.floor(Math.random() * COLORS.length)];
                 setInstruction({ type: "color", value: targetColor.name, label: t.colors[targetColor.name], negative: false, colorHex: targetColor.hex });
             }
-            // 1.4 Distraction (Shape)
             else if (phaseIndex === 3) {
                 const targetShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
                 setInstruction({ type: "shape", value: targetShape, label: t.shapes[targetShape], negative: false });
             }
 
         } else {
-            // Level 2-5 Dynamic Logic
             const isDual = level === 2 || level === 5;
             const isNegative = level === 3;
-            const changeInterval = level === 5 ? 3000 : 5000;
 
             if (isDual) {
                 const tColor = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -202,7 +212,6 @@ export default function NeuralFlashGame({ onWinGame }) {
                     colorHex: tColor.hex
                 });
             } else if (isNegative) {
-                // "NO X"
                 const isColor = Math.random() > 0.5;
                 if (isColor) {
                     const tColor = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -212,7 +221,6 @@ export default function NeuralFlashGame({ onWinGame }) {
                     setInstruction({ type: "shape", value: tShape, label: `${t.game.not} ${t.shapes[tShape]}`, negative: true });
                 }
             } else {
-                // Level 4 (Kinetic) - Simple logic, hard movement
                 const isColor = Math.random() > 0.5;
                 if (isColor) {
                     const tColor = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -225,7 +233,7 @@ export default function NeuralFlashGame({ onWinGame }) {
         }
     }, [level, phaseIndex, t]);
 
-    // Draw Helper
+    // Canvas Helpers
     const drawPolygon = (ctx, x, y, radius, sides, rotation, color, fill = false) => {
         ctx.beginPath();
         for (let i = 0; i < sides; i++) {
@@ -233,13 +241,11 @@ export default function NeuralFlashGame({ onWinGame }) {
             ctx.lineTo(x + radius * Math.cos(angle), y + radius * Math.sin(angle));
         }
         ctx.closePath();
-
         ctx.shadowBlur = 15;
         ctx.shadowColor = color;
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.stroke();
-
         if (fill) {
             ctx.fillStyle = color;
             ctx.globalAlpha = 0.2;
@@ -253,7 +259,6 @@ export default function NeuralFlashGame({ onWinGame }) {
         ctx.strokeStyle = "rgba(6, 182, 212, 0.1)";
         ctx.lineWidth = 1;
         const gridSize = 50;
-
         for (let x = 0; x <= CANVAS_WIDTH; x += gridSize) {
             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
         }
@@ -264,13 +269,17 @@ export default function NeuralFlashGame({ onWinGame }) {
 
     // Main Loop
     const animate = useCallback((time) => {
+        // Draw even if paused, but don't update physics if paused?
+        // Actually, for pause screen, usually we want a static frame or blur.
+        // Let's just return if not playing to save resources, the canvas will hold last frame
+        // unless we clear it. If we want blur, css backdrop-blur is better.
         if (gameState !== "PLAYING") return;
+
         const ctx = canvasRef.current?.getContext('2d');
         if (!ctx) return;
 
         ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        // Fail Flash Effect
         if (shake > 0) {
             ctx.strokeStyle = `rgba(255, 0, 0, ${shake / 20})`;
             ctx.lineWidth = 10;
@@ -283,21 +292,17 @@ export default function NeuralFlashGame({ onWinGame }) {
 
         // Targets
         targets.current.forEach((t, i) => {
-            // Lifetime check
             if (now - t.createdAt > t.lifeTime) {
                 targets.current.splice(i, 1);
                 return;
             }
 
-            // Animation
             if (t.scale < 1) t.scale += 0.05;
             t.rotation += 0.01;
 
-            // Movement (L4/L5)
             if (t.movementType === 'linear' || t.movementType === 'bouncing') {
                 t.x += t.vx;
                 t.y += t.vy;
-
                 if (t.movementType === 'bouncing') {
                     if (t.x <= 0 || t.x >= CANVAS_WIDTH) t.vx *= -1;
                     if (t.y <= 0 || t.y >= CANVAS_HEIGHT) t.vy *= -1;
@@ -345,47 +350,39 @@ export default function NeuralFlashGame({ onWinGame }) {
         requestRef.current = requestAnimationFrame(animate);
     }, [gameState, shake]);
 
-    // Phase Management for Level 1
+    // Initial Instruction Set
+    useEffect(() => {
+        if (level === 1) updateInstruction();
+    }, [level, phaseIndex, updateInstruction]);
+
+    // --- EFFECT: Phase Timer (Level 1) ---
     useEffect(() => {
         if (gameState !== "PLAYING" || level !== 1) return;
 
         const currentPhase = LEVEL_MAP[1].phases[phaseIndex];
         if (!currentPhase) return;
 
-        // Reset timer for new phase
-        // Actually, we use one main timer? Spec says "4 sub-phases of 15 seconds".
-        // Let's rely on a timeout to advance phase
-
-        setShowingPhaseTitle(true);
-        setTimeout(() => setShowingPhaseTitle(false), 2000);
-        updateInstruction(); // Ensure instruction matches new phase
+        // When phase starts, ensure instruction is correct
+        updateInstruction();
 
         const phaseDuration = currentPhase.duration * 1000;
         const phaseTimeout = setTimeout(() => {
-            if (phaseIndex < LEVEL_MAP[1].phases.length - 1) {
-                setPhaseIndex(prev => prev + 1);
-            } else {
-                // Level complete? Or loop? Assuming loop or end.
-                // For arcades, usually loop or next level. Let's just loop for now or end logic?
-                // Let's loop back to 0 for endless play until time runs out? 
-                // Or time runs out.
-                // Spec doesn't clarify what happens after 1.4. Let's loop instructions but keep time.
-                setPhaseIndex(0);
-            }
+            // Phase Ended!
+            setGameState("PHASE_TRANSITION");
         }, phaseDuration);
 
         return () => clearTimeout(phaseTimeout);
     }, [gameState, level, phaseIndex, updateInstruction]);
 
-    // Spawning Loop
+    // --- EFFECT: Spawner ---
     useEffect(() => {
         if (gameState !== "PLAYING") return;
-        const targetSpawnRate = SPAWN_RATE; // Simplified for now, can add mods
+        const targetSpawnRate = SPAWN_RATE;
         const interval = setInterval(spawnTarget, targetSpawnRate);
         return () => clearInterval(interval);
     }, [gameState, level, spawnTarget]);
 
-    // Global Time
+    // --- EFFECT: Timer ---
     useEffect(() => {
         if (gameState !== "PLAYING") return;
         const timer = setInterval(() => {
@@ -400,7 +397,7 @@ export default function NeuralFlashGame({ onWinGame }) {
         return () => clearInterval(timer);
     }, [gameState]);
 
-    // Auto Instruction Update for L2-L5
+    // --- EFFECT: Auto Instruction Update (L2-L5) ---
     useEffect(() => {
         if (gameState !== "PLAYING" || level === 1) return;
         updateInstruction();
@@ -409,16 +406,19 @@ export default function NeuralFlashGame({ onWinGame }) {
         return () => clearInterval(interval);
     }, [gameState, level, updateInstruction]);
 
+    // --- EFFECT: Animation Loop ---
     useEffect(() => {
-        requestRef.current = requestAnimationFrame(animate);
+        if (gameState === "PLAYING") {
+            requestRef.current = requestAnimationFrame(animate);
+        }
         return () => cancelAnimationFrame(requestRef.current);
-    }, [animate]);
+    }, [gameState, animate]);
 
     const startGame = () => {
         setGameState("PLAYING");
         setScore(0);
         setLives(3);
-        setTimeLeft(level === 1 ? 60 : 60); // 60s total for L1 (4 phases * 15s)
+        setTimeLeft(60);
         setPhaseIndex(0);
         setCombo(0);
         targets.current = [];
@@ -460,7 +460,7 @@ export default function NeuralFlashGame({ onWinGame }) {
             const t = targets.current[i];
             const dist = Math.sqrt((clickX - t.x) ** 2 + (clickY - t.y) ** 2);
 
-            if (dist < t.size * 1.2) { // Hitbox precise
+            if (dist < t.size * 1.2) {
                 const matches = checkCondition(t, instruction);
                 if (matches) {
                     handleHit(t, i);
@@ -492,8 +492,6 @@ export default function NeuralFlashGame({ onWinGame }) {
         setLastReactionTime(reactionTime);
         targets.current.splice(index, 1);
         createExplosion(target.x, target.y, target.color.hex);
-
-        // Combo Logic
         const newCombo = combo + 1;
         setCombo(newCombo);
         const multiplier = Math.floor(newCombo / 5) + 1;
@@ -502,7 +500,7 @@ export default function NeuralFlashGame({ onWinGame }) {
 
     const handleMiss = (x, y) => {
         createExplosion(x, y, "#ffffff");
-        setCombo(0); // Reset combo
+        setCombo(0);
         setLives(prev => {
             const newLives = prev - 1;
             if (newLives <= 0) endGame("GAME_OVER_LIVES");
@@ -517,7 +515,7 @@ export default function NeuralFlashGame({ onWinGame }) {
         <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-8 font-mono px-4">
 
             {/* --- HUD HEADER --- */}
-            <div className="w-full flex justify-between items-end">
+            <div className="w-full flex justify-between items-end relative z-10">
                 {/* Score Panel */}
                 <div className="flex flex-col gap-1 w-64">
                     <div className="flex justify-between text-cyan-400 text-xs tracking-[0.2em] font-bold">
@@ -541,24 +539,22 @@ export default function NeuralFlashGame({ onWinGame }) {
                             initial={{ y: -20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 10, opacity: 0 }}
-                            className={`relative px-10 py-3 rounded-xl border-2 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] ${instruction.negative ? 'border-red-500/50 bg-red-950/40 text-red-100' : 'border-cyan-500/50 bg-cyan-950/40 text-cyan-100'}`}
+                            className={`relative px-6 py-3 rounded-xl border-2 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] ${instruction.negative ? 'border-red-500/50 bg-red-950/40 text-red-100' : 'border-cyan-500/50 bg-cyan-950/40 text-cyan-100'}`}
                         >
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-1 bg-current opacity-50 rounded-full"></div>
-                            <div className="text-2xl md:text-3xl font-black italic tracking-widest text-center min-w-[300px] drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                            <div className="text-xl md:text-2xl font-black italic tracking-widest text-center min-w-[250px] drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
                                 {instruction.label}
                             </div>
-                            {/* Combo Badge */}
                             {combo > 4 && (
                                 <motion.div
                                     initial={{ scale: 0 }} animate={{ scale: 1 }}
-                                    className="absolute -top-4 -right-4 bg-yellow-500 text-black text-xs font-black px-2 py-1 rounded-full border border-white"
+                                    className="absolute -top-3 -right-3 bg-yellow-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full border border-white"
                                 >
-                                    {Math.floor(combo / 5) + 1}x MULTIPLIER
+                                    {Math.floor(combo / 5) + 1}x
                                 </motion.div>
                             )}
                         </motion.div>
                     ) : (
-                        <div className="text-slate-600 text-sm tracking-widest">{t.neural.waiting}</div>
+                        <div className="text-slate-600 text-sm tracking-widest h-10 flex items-center">{t.neural.waiting}</div>
                     )}
                 </AnimatePresence>
 
@@ -566,13 +562,20 @@ export default function NeuralFlashGame({ onWinGame }) {
                 <div className="flex flex-col gap-1 w-64 items-end">
                     <div className="flex justify-between w-full text-cyan-400 text-xs tracking-[0.2em] font-bold">
                         <span>{timeLeft}s</span>
-                        <span className="flex items-center gap-2">{t.neural.time} <Clock className="w-4 h-4" /></span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                        <motion.div
-                            animate={{ width: `${(timeLeft / 60) * 100}%` }}
-                            className={`h-full shadow-[0_0_10px_rgba(6,182,212,0.8)] ${timeLeft < 10 ? 'bg-red-500' : 'bg-cyan-500'}`}
-                        ></motion.div>
+                        <div className="flex items-center gap-4">
+                            {/* Pause Button */}
+                            {gameState === "PLAYING" && (
+                                <button onClick={pauseGame} className="text-cyan-400 hover:text-white transition-colors">
+                                    <Pause className="w-4 h-4" />
+                                </button>
+                            )}
+                            {gameState === "PAUSED" && (
+                                <button onClick={resumeGame} className="text-yellow-400 hover:text-white transition-colors animate-pulse">
+                                    <Play className="w-4 h-4" />
+                                </button>
+                            )}
+                            <span className="flex items-center gap-2">{t.neural.time} <Clock className="w-4 h-4" /></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -583,8 +586,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                 transition={{ duration: 0.4 }}
                 className={`relative w-full aspect-[4/3] max-h-[600px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group ${shake > 0 ? 'border-red-500 shadow-red-500/50' : ''}`}
             >
-
-                {/* Tech Corners (Decorative) */}
+                {/* Tech Corners */}
                 <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-2xl"></div>
                 <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-cyan-500/50 rounded-tr-2xl"></div>
                 <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-cyan-500/50 rounded-bl-2xl"></div>
@@ -598,36 +600,70 @@ export default function NeuralFlashGame({ onWinGame }) {
                     className="w-full h-full cursor-crosshair relative z-10"
                 />
 
-                {/* Phase Transition Overlay */}
+                {/* MODALS & OVERLAYS */}
                 <AnimatePresence>
-                    {gameState === "PLAYING" && showingPhaseTitle && level === 1 && (
+                    {/* Pause Overlay */}
+                    {gameState === "PAUSED" && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 2 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center"
                         >
-                            <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-white drop-shadow-[0_0_10px_rgba(0,255,255,1)]">
-                                {t.neural.next_phase}: {LEVEL_MAP[1].phases[phaseIndex].label}
-                            </h2>
+                            <h2 className="text-4xl font-black text-white italic tracking-widest mb-6">{t.neural.pause}</h2>
+                            <button onClick={resumeGame} className="bg-cyan-500 text-black font-bold px-8 py-3 rounded-full hover:scale-105 transition-transform">
+                                {t.neural.resume}
+                            </button>
                         </motion.div>
                     )}
-                </AnimatePresence>
 
-                {/* Screens */}
-                <AnimatePresence>
+                    {/* Phase Transition Modal (Window) */}
+                    {gameState === "PHASE_TRANSITION" && level === 1 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.1 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md"
+                        >
+                            <div className="bg-slate-900 border border-cyan-500/50 p-8 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.3)] max-w-sm w-full text-center relative overflow-hidden">
+                                {/* Decorative scanline */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+
+                                <h3 className="text-cyan-400 text-xs font-bold uppercase tracking-[0.3em] mb-2">{t.neural.phase_completed}</h3>
+                                <h2 className="text-3xl font-black text-white italic mb-6">
+                                    {LEVEL_MAP[1].phases[phaseIndex].label}
+                                </h2>
+
+                                <div className="flex flex-col gap-2 mb-8">
+                                    <span className="text-slate-400 text-sm">Next Protocol:</span>
+                                    <span className="text-xl font-bold text-yellow-400">
+                                        {LEVEL_MAP[1].phases[(phaseIndex + 1) % 4].label}
+                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={startNextPhase}
+                                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-lg transition-all group"
+                                >
+                                    {t.neural.start_phase} <Play className="inline-block w-4 h-4 ml-2 fill-current group-hover:scale-125 transition-transform" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Game Start / Idle */}
                     {gameState === "IDLE" && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
                             <motion.button
-                                whileHover={{ scale: 1.1 }}
+                                whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={startGame}
-                                className="relative group"
+                                className="relative group overflow-hidden rounded-xl"
                             >
-                                <div className="absolute inset-0 bg-cyan-500 blur-xl opacity-50 group-hover:opacity-80 transition-opacity"></div>
-                                <div className="relative bg-black border-2 border-cyan-400 px-12 py-6 rounded-lg flex items-center gap-4">
-                                    <ScanLine className="w-8 h-8 text-cyan-400" />
-                                    <span className="text-3xl font-black italic text-white tracking-widest">{t.neural.start}<span className="text-cyan-400">_</span></span>
+                                <div className="absolute inset-0 bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors"></div>
+                                <div className="relative border-2 border-cyan-400 px-16 py-8 rounded-xl flex items-center gap-6 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] transition-all">
+                                    <ScanLine className="w-10 h-10 text-cyan-400 stroke-[1.5]" />
+                                    <span className="text-4xl font-black italic text-white tracking-widest font-mono">
+                                        {t.neural.start}<span className="text-cyan-400 animate-pulse">_</span>
+                                    </span>
                                 </div>
                             </motion.button>
                             <div className="mt-8 flex gap-4">
@@ -644,9 +680,10 @@ export default function NeuralFlashGame({ onWinGame }) {
                         </div>
                     )}
 
+                    {/* Game Over */}
                     {gameState === "GAME_OVER" && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md text-center">
-                            <div className="text-6xl mb-4">💀</div>
+                            <HeartCrack className="w-20 h-20 text-slate-700 mb-4 drop-shadow-[0_0_10px_rgba(255,0,0,0.2)]" />
                             <h2 className="text-4xl font-black text-red-500 tracking-[0.5em] mb-2 uppercase">{t.neural.game_over}</h2>
                             <p className="text-slate-400 mb-8 font-mono">{t.neural.final_score}: {score}</p>
                             <button

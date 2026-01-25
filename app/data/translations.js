@@ -121,7 +121,11 @@ export const translations = {
             final_score: "Puntaje Final",
             retry: "REINTENTAR",
             waiting: "SISTEMA EN ESPERA...",
-            next_phase: "FASE SIGUIENTE"
+            next_phase: "FASE SIGUIENTE",
+            start_phase: "INICIAR FASE",
+            pause: "PAUSA",
+            resume: "CONTINUAR",
+            phase_completed: "FASE COMPLETADA"
         },
         colors: {
             blue: "AZUL",
@@ -261,7 +265,11 @@ export const translations = {
             final_score: "Final Score",
             retry: "RETRY",
             waiting: "SYSTEM STANDBY...",
-            next_phase: "NEXT PHASE"
+            next_phase: "NEXT PHASE",
+            start_phase: "START PHASE",
+            pause: "PAUSE",
+            resume: "RESUME",
+            phase_completed: "PHASE COMPLETED"
         },
         colors: {
             blue: "BLUE",
