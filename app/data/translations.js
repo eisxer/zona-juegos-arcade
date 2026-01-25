@@ -104,6 +104,19 @@ export const translations = {
             desc: "Cálculo de alta velocidad",
             in_development: "Módulo en Desarrollo",
             not_available: "El procesador matemático no está disponible en esta versión."
+        },
+        neural: {
+            title: "NEURAL FLASH",
+            desc: "Reflejos tácticos (VELOCIDAD)",
+            start: "INICIAR",
+            levels: {
+                1: "Corteza Motora",
+                2: "Corteza Visual",
+                3: "Prefrontal"
+            }
+        },
+        game: {
+            not: "NO"
         }
     },
     en: {
@@ -211,6 +224,19 @@ export const translations = {
             desc: "High speed calculation",
             in_development: "Module in Development",
             not_available: "The math processor is not available in this version."
+        },
+        neural: {
+            title: "NEURAL FLASH",
+            desc: "Tactical reflexes (SPEED)",
+            start: "START",
+            levels: {
+                1: "Motor Cortex",
+                2: "Visual Cortex",
+                3: "Prefrontal"
+            }
+        },
+        game: {
+            not: "NOT"
         }
     }
 };

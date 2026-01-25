@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Gamepad2, Brain, Calculator, ArrowLeft, Lock, Users, Medal, Cpu, ChevronsLeft
+    Gamepad2, Brain, Calculator, ArrowLeft, Lock, Users, Medal, Cpu, ChevronsLeft, Zap
 } from "lucide-react";
 import MemoryGame from "./MemoryGame";
 import WordleGame from "./WordleGame";
 import MathGame from "./MathGame";
+import NeuralFlashGame from "./NeuralFlashGame";
 import BrandLogo from "./BrandLogo";
 import { useLanguage } from "../context/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
@@ -35,6 +36,17 @@ const GAMES_MENU = [
         colorTo: "to-purple-600",
         glow: "shadow-[0_0_30px_rgba(217,70,239,0.5)]",
         border: "border-fuchsia-500/50",
+        locked: false,
+    },
+    {
+        id: "neural",
+        title: "Neural Flash",
+        desc: "Reflejos Tácticos",
+        icon: <Zap className="w-8 h-8 md:w-10 md:h-10 text-yellow-300" />,
+        colorFrom: "from-yellow-400",
+        colorTo: "to-orange-500",
+        glow: "shadow-[0_0_30px_rgba(250,204,21,0.5)]",
+        border: "border-yellow-400/50",
         locked: false,
     },
     {
@@ -309,8 +321,8 @@ function GamesList({ onSelectGame, guestScores = {} }) {
             {GAMES_MENU.map((game) => {
                 const gameScore = guestScores[game.id] || 0;
                 // Obtener título y descripción traducidos
-                const gameTitle = game.id === 'memory' ? t.memory.title : game.id === 'wordle' ? t.wordle.title : t.math.title;
-                const gameDesc = game.id === 'memory' ? t.memory.desc : game.id === 'wordle' ? t.wordle.desc : t.math.desc;
+                const gameTitle = game.id === 'memory' ? t.memory.title : game.id === 'wordle' ? t.wordle.title : game.id === 'neural' ? t.neural.title : t.math.title;
+                const gameDesc = game.id === 'memory' ? t.memory.desc : game.id === 'wordle' ? t.wordle.desc : game.id === 'neural' ? t.neural.desc : t.math.desc;
 
                 return (
                     <motion.button
@@ -391,6 +403,7 @@ function ActiveGameWrapper({ gameId, onBack, onWin }) {
             <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full pb-20">
                 {gameId === 'memory' && <MemoryGame onWinGame={onWin} />}
                 {gameId === 'wordle' && <WordleGame onWinGame={onWin} />}
+                {gameId === 'neural' && <NeuralFlashGame onWinGame={onWin} />}
                 {gameId === 'math' && <MathGame />}
             </div>
         </motion.div>
