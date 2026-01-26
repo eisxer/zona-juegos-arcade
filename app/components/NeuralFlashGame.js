@@ -19,14 +19,15 @@ const COLORS = [
 ];
 
 // Difficulty Level Map
+// Labels are now retrieved from translations via key (index + 1)
 const LEVEL_MAP = {
     1: {
         isMultiPhase: true,
         phases: [
-            { id: "1.1", duration: 15, forceShape: "circle", forceColor: null, speedMult: 1, label: "COLOR FOCUS" },
-            { id: "1.2", duration: 15, forceShape: null, forceColor: "red", speedMult: 1, label: "SHAPE FOCUS" },
-            { id: "1.3", duration: 15, forceShape: "circle", forceColor: null, speedMult: 2, label: "SPEED BURST" },
-            { id: "1.4", duration: 15, forceShape: null, forceColor: null, speedMult: 1.2, label: "DISTRACTION" }
+            { id: "1.1", duration: 15, forceShape: "circle", forceColor: null, speedMult: 1 }, // Phase 1
+            { id: "1.2", duration: 15, forceShape: null, forceColor: "red", speedMult: 1 },    // Phase 2
+            { id: "1.3", duration: 15, forceShape: "circle", forceColor: null, speedMult: 2 }, // Phase 3
+            { id: "1.4", duration: 15, forceShape: null, forceColor: null, speedMult: 1.2 }   // Phase 4
         ]
     },
     2: { type: "intersection", movement: false, complexity: 2, trapChance: 0.3 },
@@ -41,7 +42,7 @@ export default function NeuralFlashGame({ onWinGame }) {
     const requestRef = useRef();
 
     // Game State
-    // States: IDLE, PLAYING, PAUSED, PHASE_TRANSITION, GAME_OVER
+    // States: IDLE, COUNTDOWN, PLAYING, PAUSED, PHASE_TRANSITION, GAME_OVER
     const [gameState, setGameState] = useState("IDLE");
     const [level, setLevel] = useState(1);
     const [score, setScore] = useState(0);
@@ -51,6 +52,7 @@ export default function NeuralFlashGame({ onWinGame }) {
     const [lastReactionTime, setLastReactionTime] = useState(null);
     const [shake, setShake] = useState(0);
     const [phaseIndex, setPhaseIndex] = useState(0);
+    const [countdown, setCountdown] = useState(3);
 
     // Combo System
     const [combo, setCombo] = useState(0);
@@ -61,7 +63,8 @@ export default function NeuralFlashGame({ onWinGame }) {
 
     // Logic to resume game from pause/transition
     const resumeGame = () => {
-        setGameState("PLAYING");
+        setCountdown(3);
+        setGameState("COUNTDOWN");
     };
 
     const pauseGame = () => {
@@ -69,13 +72,25 @@ export default function NeuralFlashGame({ onWinGame }) {
     };
 
     const startNextPhase = () => {
-        // Increment phase index here
         let nextIndex = phaseIndex + 1;
         if (nextIndex >= LEVEL_MAP[1].phases.length) {
-            nextIndex = 0; // Loop or Finish? Looping for now as per previous logic
+            nextIndex = 0;
         }
         setPhaseIndex(nextIndex);
-        setGameState("PLAYING");
+        setCountdown(3);
+        setGameState("COUNTDOWN");
+    };
+
+    // --- COLLISION ALGO ---
+    const isValidPosition = (x, y) => {
+        const MIN_DIST = 80; // Requested 80px minimum distance
+        for (const t of targets.current) {
+            const dist = Math.sqrt((x - t.x) ** 2 + (y - t.y) ** 2);
+            if (dist < MIN_DIST) {
+                return false;
+            }
+        }
+        return true;
     };
 
     // --- SPAWNING LOGIC ---
@@ -133,26 +148,17 @@ export default function NeuralFlashGame({ onWinGame }) {
 
         let x, y, safe;
         let attempts = 0;
-        const size = 35;
         const padding = 60;
 
         // Overlap Check Loop
         do {
             x = Math.random() * (CANVAS_WIDTH - padding * 2) + padding;
             y = Math.random() * (CANVAS_HEIGHT - padding * 2) + padding;
-            safe = true;
-
-            for (const t of targets.current) {
-                const dist = Math.sqrt((x - t.x) ** 2 + (y - t.y) ** 2);
-                if (dist < (size + t.size) * 1.2) { // 20% margin
-                    safe = false;
-                    break;
-                }
-            }
+            safe = isValidPosition(x, y);
             attempts++;
-        } while (!safe && attempts < 10);
+        } while (!safe && attempts < 15);
 
-        if (!safe) return; // Skip spawn if no space found
+        if (!safe) return;
 
         let vx = 0, vy = 0;
         if (movementType === 'linear' || movementType === 'bouncing') {
@@ -160,6 +166,7 @@ export default function NeuralFlashGame({ onWinGame }) {
             vy = (Math.random() - 0.5) * 4;
         }
 
+        const size = 35;
         targets.current.push({
             id: performance.now(),
             x, y, vx, vy,
@@ -269,11 +276,7 @@ export default function NeuralFlashGame({ onWinGame }) {
 
     // Main Loop
     const animate = useCallback((time) => {
-        // Draw even if paused, but don't update physics if paused?
-        // Actually, for pause screen, usually we want a static frame or blur.
-        // Let's just return if not playing to save resources, the canvas will hold last frame
-        // unless we clear it. If we want blur, css backdrop-blur is better.
-        if (gameState !== "PLAYING") return;
+        if (gameState !== "PLAYING" && gameState !== "COUNTDOWN") return;
 
         const ctx = canvasRef.current?.getContext('2d');
         if (!ctx) return;
@@ -288,24 +291,30 @@ export default function NeuralFlashGame({ onWinGame }) {
 
         drawGrid(ctx);
 
+        // Only update objects if PLAYING due to countdown freeze?
+        // Actually, if we are in COUNTDOWN, we might want to freeze the game visually or just show grid
+        // Let's hide objects or keep them frozen.
+        const shouldUpdate = gameState === "PLAYING";
+
         const now = performance.now();
 
         // Targets
         targets.current.forEach((t, i) => {
-            if (now - t.createdAt > t.lifeTime) {
-                targets.current.splice(i, 1);
-                return;
-            }
+            if (shouldUpdate) {
+                if (now - t.createdAt > t.lifeTime) {
+                    targets.current.splice(i, 1);
+                    return;
+                }
+                if (t.scale < 1) t.scale += 0.05;
+                t.rotation += 0.01;
 
-            if (t.scale < 1) t.scale += 0.05;
-            t.rotation += 0.01;
-
-            if (t.movementType === 'linear' || t.movementType === 'bouncing') {
-                t.x += t.vx;
-                t.y += t.vy;
-                if (t.movementType === 'bouncing') {
-                    if (t.x <= 0 || t.x >= CANVAS_WIDTH) t.vx *= -1;
-                    if (t.y <= 0 || t.y >= CANVAS_HEIGHT) t.vy *= -1;
+                if (t.movementType === 'linear' || t.movementType === 'bouncing') {
+                    t.x += t.vx;
+                    t.y += t.vy;
+                    if (t.movementType === 'bouncing') {
+                        if (t.x <= 0 || t.x >= CANVAS_WIDTH) t.vx *= -1;
+                        if (t.y <= 0 || t.y >= CANVAS_HEIGHT) t.vy *= -1;
+                    }
                 }
             }
 
@@ -335,9 +344,13 @@ export default function NeuralFlashGame({ onWinGame }) {
 
         // Particles
         particles.current.forEach((p, i) => {
-            p.life--;
-            p.x += p.vx;
-            p.y += p.vy;
+            if (shouldUpdate) {
+                p.life--;
+                p.x += p.vx;
+                p.y += p.vy;
+            }
+            if (!shouldUpdate) return; // Freeze particles too
+
             ctx.fillStyle = p.color;
             ctx.globalAlpha = p.life / 25;
             ctx.beginPath();
@@ -355,6 +368,25 @@ export default function NeuralFlashGame({ onWinGame }) {
         if (level === 1) updateInstruction();
     }, [level, phaseIndex, updateInstruction]);
 
+    // --- EFFECT: Countdown ---
+    useEffect(() => {
+        if (gameState !== "COUNTDOWN") return;
+
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                const next = prev - 1;
+                if (next <= 0) {
+                    setGameState("PLAYING");
+                    clearInterval(timer);
+                    return 0;
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [gameState]);
+
     // --- EFFECT: Phase Timer (Level 1) ---
     useEffect(() => {
         if (gameState !== "PLAYING" || level !== 1) return;
@@ -362,12 +394,10 @@ export default function NeuralFlashGame({ onWinGame }) {
         const currentPhase = LEVEL_MAP[1].phases[phaseIndex];
         if (!currentPhase) return;
 
-        // When phase starts, ensure instruction is correct
         updateInstruction();
 
         const phaseDuration = currentPhase.duration * 1000;
         const phaseTimeout = setTimeout(() => {
-            // Phase Ended!
             setGameState("PHASE_TRANSITION");
         }, phaseDuration);
 
@@ -408,14 +438,13 @@ export default function NeuralFlashGame({ onWinGame }) {
 
     // --- EFFECT: Animation Loop ---
     useEffect(() => {
-        if (gameState === "PLAYING") {
+        if (gameState === "PLAYING" || gameState === "COUNTDOWN") {
             requestRef.current = requestAnimationFrame(animate);
         }
         return () => cancelAnimationFrame(requestRef.current);
     }, [gameState, animate]);
 
     const startGame = () => {
-        setGameState("PLAYING");
         setScore(0);
         setLives(3);
         setTimeLeft(60);
@@ -424,6 +453,8 @@ export default function NeuralFlashGame({ onWinGame }) {
         targets.current = [];
         particles.current = [];
         updateInstruction();
+        setCountdown(3);
+        setGameState("COUNTDOWN"); // Start with countdown
     };
 
     const endGame = (reason) => {
@@ -511,6 +542,13 @@ export default function NeuralFlashGame({ onWinGame }) {
         setTimeout(() => setShake(0), 500);
     };
 
+    // Helper to get translated phase title safe
+    const getPhaseTitle = (idx) => {
+        try {
+            return t.neural.phase_titles[idx + 1] || "Phase " + (idx + 1);
+        } catch (e) { return "Phase " + (idx + 1); }
+    };
+
     return (
         <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-8 font-mono px-4">
 
@@ -533,7 +571,7 @@ export default function NeuralFlashGame({ onWinGame }) {
 
                 {/* Main Instruction */}
                 <AnimatePresence mode="wait">
-                    {gameState === "PLAYING" && instruction ? (
+                    {(gameState === "PLAYING" || gameState === "COUNTDOWN") && instruction ? (
                         <motion.div
                             key={instruction.label}
                             initial={{ y: -20, opacity: 0 }}
@@ -602,6 +640,26 @@ export default function NeuralFlashGame({ onWinGame }) {
 
                 {/* MODALS & OVERLAYS */}
                 <AnimatePresence>
+                    {/* Countdown Overlay */}
+                    {gameState === "COUNTDOWN" && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.5 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/20 backdrop-blur-[2px]"
+                        >
+                            <motion.span
+                                key={countdown}
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1.5, opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-9xl font-black text-cyan-400 drop-shadow-[0_0_50px_rgba(6,182,212,0.8)]"
+                            >
+                                {countdown}
+                            </motion.span>
+                        </motion.div>
+                    )}
+
                     {/* Pause Overlay */}
                     {gameState === "PAUSED" && (
                         <motion.div
@@ -629,13 +687,13 @@ export default function NeuralFlashGame({ onWinGame }) {
 
                                 <h3 className="text-cyan-400 text-xs font-bold uppercase tracking-[0.3em] mb-2">{t.neural.phase_completed}</h3>
                                 <h2 className="text-3xl font-black text-white italic mb-6">
-                                    {LEVEL_MAP[1].phases[phaseIndex].label}
+                                    {getPhaseTitle(phaseIndex)}
                                 </h2>
 
                                 <div className="flex flex-col gap-2 mb-8">
                                     <span className="text-slate-400 text-sm">Next Protocol:</span>
                                     <span className="text-xl font-bold text-yellow-400">
-                                        {LEVEL_MAP[1].phases[(phaseIndex + 1) % 4].label}
+                                        {getPhaseTitle((phaseIndex + 1) % 4)}
                                     </span>
                                 </div>
 

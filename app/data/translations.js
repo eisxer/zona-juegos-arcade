@@ -125,7 +125,13 @@ export const translations = {
             start_phase: "INICIAR FASE",
             pause: "PAUSA",
             resume: "CONTINUAR",
-            phase_completed: "FASE COMPLETADA"
+            phase_completed: "FASE COMPLETADA",
+            phase_titles: {
+                1: "Sincronía de Color",
+                2: "Análisis Geométrico",
+                3: "Impulso de Velocidad",
+                4: "Filtro Cognitivo"
+            }
         },
         colors: {
             blue: "AZUL",
@@ -269,7 +275,13 @@ export const translations = {
             start_phase: "START PHASE",
             pause: "PAUSE",
             resume: "RESUME",
-            phase_completed: "PHASE COMPLETED"
+            phase_completed: "PHASE COMPLETED",
+            phase_titles: {
+                1: "Color Sync",
+                2: "Geometric Analysis",
+                3: "Speed Burst",
+                4: "Cognitive Filter"
+            }
         },
         colors: {
             blue: "BLUE",
