@@ -550,10 +550,10 @@ export default function NeuralFlashGame({ onWinGame }) {
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-8 font-mono px-4">
+        <div className="w-full max-w-7xl mx-auto flex flex-col items-center gap-8 font-mono px-4">
 
             {/* --- HUD HEADER --- */}
-            <div className="w-full flex justify-between items-end relative z-10">
+            <div className="w-full flex justify-between items-end relative z-10 -mt-8">
                 {/* Score Panel */}
                 <div className="flex flex-col gap-1 w-64">
                     <div className="flex justify-between text-cyan-400 text-xs tracking-[0.2em] font-bold">
@@ -577,7 +577,7 @@ export default function NeuralFlashGame({ onWinGame }) {
                             initial={{ y: -20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 10, opacity: 0 }}
-                            className={`relative px-6 py-3 rounded-xl border-2 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] ${instruction.negative ? 'border-red-500/50 bg-red-950/40 text-red-100' : 'border-cyan-500/50 bg-cyan-950/40 text-cyan-100'}`}
+                            className={`relative mb-20 z-20 px-8 py-4 rounded-xl border-2 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)] ${instruction.negative ? 'border-red-500/50 bg-red-950/40 text-red-100' : 'border-cyan-500/50 bg-cyan-950/40 text-cyan-100'}`}
                         >
                             <div className="text-xl md:text-2xl font-black italic tracking-widest text-center min-w-[250px] drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
                                 {instruction.label}
@@ -622,7 +622,7 @@ export default function NeuralFlashGame({ onWinGame }) {
             <motion.div
                 animate={{ x: shake > 0 ? [0, -10, 10, -10, 10, 0] : 0 }}
                 transition={{ duration: 0.4 }}
-                className={`relative w-full aspect-[4/3] max-h-[600px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group ${shake > 0 ? 'border-red-500 shadow-red-500/50' : ''}`}
+                className={`relative w-full aspect-[4/3] max-h-[800px] border border-cyan-500/30 bg-slate-950/50 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(6,182,212,0.1)] group ${shake > 0 ? 'border-red-500 shadow-red-500/50' : ''}`}
             >
                 {/* Tech Corners */}
                 <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-2xl"></div>
@@ -707,29 +707,95 @@ export default function NeuralFlashGame({ onWinGame }) {
                         </motion.div>
                     )}
 
-                    {/* Game Start / Idle */}
+                    {/* Game Start / Idle - COSMIC NEURAL UI */}
                     {gameState === "IDLE" && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={startGame}
-                                className="relative group overflow-hidden rounded-xl"
-                            >
-                                <div className="absolute inset-0 bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-colors"></div>
-                                <div className="relative border-2 border-cyan-400 px-16 py-8 rounded-xl flex items-center gap-6 shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] transition-all">
-                                    <ScanLine className="w-10 h-10 text-cyan-400 stroke-[1.5]" />
-                                    <span className="text-4xl font-black italic text-white tracking-widest font-mono">
-                                        {t.neural.start}<span className="text-cyan-400 animate-pulse">_</span>
-                                    </span>
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0a0a16] text-cyan-400 overflow-hidden">
+
+                            {/* Background Effects */}
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(120,50,255,0.15)_0%,_transparent_60%)]"></div>
+                            <div className="absolute top-0 w-full h-full opacity-20" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+
+                            {/* Top HUD */}
+                            <div className="absolute top-6 left-8 flex flex-col gap-1">
+                                <span className="text-[10px] text-slate-300 tracking-widest font-mono">SCORE: 000000</span>
+                                <span className="text-[10px] text-slate-300 tracking-widest font-mono">MULTIPLIER x1.0</span>
+                                <div className="w-32 h-1 bg-slate-800 mt-1 relative overflow-hidden">
+                                    <div className="absolute inset-y-0 left-0 w-1/3 bg-cyan-400"></div>
                                 </div>
-                            </motion.button>
-                            <div className="mt-8 flex gap-4">
+                            </div>
+
+                            <div className="absolute top-6 right-8 flex flex-col items-end gap-2">
+                                <span className="text-[10px] text-slate-300 tracking-widest font-mono">CHRONO OPS</span>
+                                <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-cyan-400 animate-spin"></div>
+                                <span className="text-[9px] text-slate-500 font-mono">READY: {new Date().toLocaleTimeString()}</span>
+                            </div>
+
+                            {/* Main Arc */}
+                            <div className="absolute top-[15%] w-[80%] h-[70%] border-t-[6px] border-cyan-400/30 rounded-full shadow-[0_0_30px_rgba(34,211,238,0.2)]"></div>
+
+                            {/* Central Portal Component */}
+                            <div className="relative mb-8 mt-20">
+                                {/* Orbiting Nodes */}
+                                <div className="absolute inset-0 animate-spin-slow">
+                                    {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+                                        <div
+                                            key={i}
+                                            className="absolute md:w-16 md:h-16 w-12 h-12 flex items-center justify-center border border-orange-500/30 bg-black/50 rounded-full backdrop-blur-sm"
+                                            style={{
+                                                top: '50%', left: '50%',
+                                                transform: `rotate(${deg}deg) translate(140px) rotate(-${deg}deg)`
+                                            }}
+                                        >
+                                            {i % 4 === 0 && <span className="w-4 h-4 border-2 border-red-500 rounded-full"></span>}
+                                            {i % 4 === 1 && <span className="w-4 h-4 border-2 border-green-500 transform rotate-45"></span>}
+                                            {i % 4 === 2 && <span className="w-4 h-4 border-2 border-blue-500"></span>}
+                                            {i % 4 === 3 && <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-yellow-500"></div>}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Core */}
+                                <div className="relative z-10 w-40 h-40 md:w-56 md:h-56 rounded-full bg-black flex items-center justify-center shadow-[0_0_80px_rgba(168,85,247,0.4)]">
+                                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 opacity-20 animate-pulse"></div>
+                                    <div className="absolute inset-4 rounded-full border border-purple-500/30"></div>
+                                    <div className="w-24 h-24 md:w-32 md:h-32 bg-[conic-gradient(from_0deg,transparent_0_340deg,white_360deg)] rounded-full animate-spin opacity-50 blur-xl"></div>
+
+                                    {/* Swirl Effect Simulation */}
+                                    <div className="absolute inset-0 rounded-full overflow-hidden">
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-[radial-gradient(circle,_transparent_30%,_#d946ef_70%)] opacity-30 animate-spin-slow" style={{ animationDuration: '8s' }}></div>
+                                    </div>
+                                </div>
+
+                                <div className="absolute top-1/2 -right-32 md:-right-48 -translate-y-1/2 text-xs font-mono text-cyan-200/70 tracking-widest hidden md:block">
+                                    LEVEL {level} // {LEVEL_MAP[level]?.label || `PROTOCOL ${level}`}
+                                </div>
+                            </div>
+
+                            {/* Main Action Button */}
+                            <div className="relative z-30 flex flex-col items-center gap-2 mt-4">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={startGame}
+                                    className="relative group "
+                                >
+                                    <div className="absolute inset-0 bg-cyan-500/20 blur-md rounded-lg group-hover:bg-cyan-500/40 transition-all"></div>
+                                    <div className="relative px-8 py-3 border border-cyan-400 bg-black/60 backdrop-blur-sm flex items-center gap-3 rounded text-cyan-300 group-hover:text-white transition-colors">
+                                        <span className="text-xl font-bold tracking-[0.2em]">[ ACTIVATE NEURAL LINK ]</span>
+                                    </div>
+                                </motion.button>
+                                <span className="text-[10px] text-cyan-600 tracking-[0.3em] font-mono animate-pulse">
+                                    [ AWAITING BIOMETRIC SCAN... ]
+                                </span>
+                            </div>
+
+                            {/* Level Selectors - Reintegrated purely as visuals/buttons below */}
+                            <div className="mt-8 flex gap-3 z-30">
                                 {Object.keys(LEVEL_MAP).map(l => (
                                     <button
                                         key={l}
                                         onClick={() => setLevel(parseInt(l))}
-                                        className={`px-4 py-2 border rounded text-xs font-bold uppercase tracking-widest transition-all ${level === parseInt(l) ? 'border-cyan-400 text-cyan-400 bg-cyan-950' : 'border-slate-700 text-slate-600 hover:border-slate-500'}`}
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${level === parseInt(l) ? 'border-cyan-400 bg-cyan-900/50 text-white shadow-[0_0_15px_cyan]' : 'border-slate-800 bg-slate-900 text-slate-600 hover:border-slate-600'}`}
                                     >
                                         L{l}
                                     </button>
